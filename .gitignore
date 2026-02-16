@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 secrets.*
 Secrets.*
+__pycache__/*
 
 # C extensions
 *.so
