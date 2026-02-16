@@ -6,13 +6,10 @@ from WeatherWidget import WeatherWidget
 from WeatherDto import WeatherDto
 import secrets
 
-#TODO : Split grid and constants out
-# Move GRIDS to secrets file
-# Location be new class: ? GRIDS/name/
-#WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/PHI/39,67/forecast/hourly"
+
+# Location be dynically loaded confif class
 WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/"+secrets.LOCATION+"/forecast/hourly"
-WEATHER_URL_FORECAST= "https://api.weather.gov/gridpoints/PHI/39,67/forecast"
-#HEADERS = {"User-Agent":"PICO RPI4"}
+WEATHER_URL_FORECAST= "https://api.weather.gov/gridpoints/"+secrets.LOCATION+"/forecast"
 HEADERS = secrets.HEADERS
 
 class WeatherUI(QWidget):
