@@ -6,8 +6,7 @@ from WeatherWidget import WeatherWidget
 from WeatherDto import WeatherDto
 import secrets
 
-
-# Location be dynically loaded confif class
+# Location be dynically loaded config class
 WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/"+secrets.LOCATION+"/forecast/hourly"
 WEATHER_URL_FORECAST= "https://api.weather.gov/gridpoints/"+secrets.LOCATION+"/forecast"
 HEADERS = secrets.HEADERS
