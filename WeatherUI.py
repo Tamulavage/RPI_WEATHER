@@ -148,8 +148,7 @@ class WeatherUI(QWidget):
 
         self.setWindowTitle('Weather')
         self.setStyleSheet("background-color: #121212; color: white;")
-        
-        
+                
     def on_btn_toggle_size(self, fullScreen):
         self.toggle_full_screen(fullScreen)
         
@@ -204,45 +203,39 @@ class WeatherUI(QWidget):
                 forecast_json = response.json()
                 temp = self.parse_response_single_field(forecast_json)
                 self.main_temp_label.setText(temp+" °F")
+                icon = self.parse_response_single_field(forecast_json, item_value="icon")
+                self.update_icon(icon)
             
             if(self.time_frame==Constanst.DAILY): 
                 response = requests.get(WEATHER_URL_FORECAST, headers=HEADERS)     
 
             if(response.status_code==200):
                 forecast_json = response.json()
-                forecast = self.parse_response_single_field(forecast_json, item_value="detailedForecast")
-                
+      
                 # If not not current period , then do not auto refresh
                 if(str(self.main_period) == str("1")):
-        
-                    forecast = self.parse_response_single_field(forecast_json, item_value="detailedForecast")
-                    if(forecast==''):
-                        forecast = self.parse_response_single_field(forecast_json, item_value="shortForecast")
-                    icon = self.parse_response_single_field(forecast_json, item_value="icon")
-                    self.main_forecast_label.setText(forecast)
-                    self.main_forecast_label.setWordWrap(True)
-                    self.main_forecast_label.resize(self.main_forecast_label.sizeHint())
-                    self.update_icon(icon)
-                    
-                # Can this be move to array of DTOs?
-                self.period_1_dto=self.update_dto(self.period_1_dto, 1, forecast_json)
-                self.period_1_widget.update_dataset(self.period_1_dto)
-                self.period_2_dto=self.update_dto(self.period_2_dto, 2, forecast_json)
-                self.period_2_widget.update_dataset(self.period_2_dto)
-                self.period_3_dto=self.update_dto(self.period_3_dto, 3, forecast_json)
-                self.period_3_widget.update_dataset(self.period_3_dto)
-                self.period_4_dto=self.update_dto(self.period_4_dto, 4, forecast_json)
-                self.period_4_widget.update_dataset(self.period_4_dto)
-                self.period_5_dto=self.update_dto(self.period_5_dto, 5, forecast_json)
-                self.period_5_widget.update_dataset(self.period_5_dto)
-                self.period_6_dto=self.update_dto(self.period_6_dto, 6, forecast_json)
-                self.period_6_widget.update_dataset(self.period_6_dto)
-                self.period_7_dto=self.update_dto(self.period_7_dto, 7, forecast_json)
-                self.period_7_widget.update_dataset(self.period_7_dto)
-                self.period_8_dto=self.update_dto(self.period_8_dto, 8, forecast_json)
-                self.period_8_widget.update_dataset(self.period_8_dto)
-                self.period_9_dto=self.update_dto(self.period_9_dto, 9, forecast_json)
-                self.period_9_widget.update_dataset(self.period_9_dto)
+
+                    # Can this be move to array of DTOs?
+                    self.period_1_dto=self.update_dto(self.period_1_dto, 1, forecast_json)
+                    self.period_1_widget.update_dataset(self.period_1_dto)
+                    self.period_2_dto=self.update_dto(self.period_2_dto, 2, forecast_json)
+                    self.period_2_widget.update_dataset(self.period_2_dto)
+                    self.period_3_dto=self.update_dto(self.period_3_dto, 3, forecast_json)
+                    self.period_3_widget.update_dataset(self.period_3_dto)
+                    self.period_4_dto=self.update_dto(self.period_4_dto, 4, forecast_json)
+                    self.period_4_widget.update_dataset(self.period_4_dto)
+                    self.period_5_dto=self.update_dto(self.period_5_dto, 5, forecast_json)
+                    self.period_5_widget.update_dataset(self.period_5_dto)
+                    self.period_6_dto=self.update_dto(self.period_6_dto, 6, forecast_json)
+                    self.period_6_widget.update_dataset(self.period_6_dto)
+                    self.period_7_dto=self.update_dto(self.period_7_dto, 7, forecast_json)
+                    self.period_7_widget.update_dataset(self.period_7_dto)
+                    self.period_8_dto=self.update_dto(self.period_8_dto, 8, forecast_json)
+                    self.period_8_widget.update_dataset(self.period_8_dto)
+                    self.period_9_dto=self.update_dto(self.period_9_dto, 9, forecast_json)
+                    self.period_9_widget.update_dataset(self.period_9_dto)
+
+                    self.update_main(self.period_1_dto)
                 
         except Exception as e:
             print(f"Refresh error: {e}")
@@ -262,22 +255,22 @@ class WeatherUI(QWidget):
         return str(value)
     
     def parse_response_multi_field(self, response, period = 1,
-                                    itemValue1="temperature",
-                                    itemValue2="name",
-                                    itemValue3="shortForecast",
-                                    itemValue4="detailedForecast",
-                                    itemValue5="icon",
-                                    itemValue6="startTime"):
+                                    item_1="temperature",
+                                    item_2="name",
+                                    item_3="shortForecast",
+                                    item_4="detailedForecast",
+                                    item_5="icon",
+                                    item_6="startTime"):
         periods = response["properties"]["periods"]
         for item in periods:
             #print("day: " , item["name"] , " Temp: " , item["temperature"], " Forcast: ", item["detailedForecast"])
             if item["number"] == period:
-                value1 = item[itemValue1]
-                value2 = item[itemValue2]
-                value3 = item[itemValue3]
-                value4 = item[itemValue4]
-                value5 = item[itemValue5]
-                value6 = item[itemValue6]
+                value1 = item[item_1]
+                value2 = item[item_2]
+                value3 = item[item_3]
+                value4 = item[item_4]
+                value5 = item[item_5]
+                value6 = item[item_6]
                 break
         return str(value1), str(value2),str(value3) ,str(value4),str(value5),str(value6)
 
@@ -288,13 +281,14 @@ class WeatherUI(QWidget):
         self.icon_label.setPixmap(QPixmap.fromImage(img))
         
     def period_clicked(self, period):
-        #print(period)
         self.update_main(self.identify_dto(period))
         
     def update_main(self, dto):
         self.main_period=dto.period
-        self.main_temp_label.setText(dto.temp)
-        self.update_icon(dto.icon)
+        # Main is already set for period 1 for icon and temp, do not overwrite it
+        if(dto.period != str("1")): 
+            self.main_temp_label.setText(dto.temp)
+            self.update_icon(dto.icon)
         if(self.time_frame==Constanst.DAILY): 
             self.main_period_desc.setText(dto.full_day+":")
             self.main_forecast_label.setText(dto.long_forecast)
@@ -327,4 +321,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
