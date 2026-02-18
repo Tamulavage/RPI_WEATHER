@@ -7,7 +7,6 @@ class WeatherWidget(QWidget):
     clickedValue = QtCore.pyqtSignal(str)
     period = '0'
     dataset = None
-
     
     def __init__(self):
         super().__init__()
@@ -23,7 +22,6 @@ class WeatherWidget(QWidget):
         
         inner_layout = QVBoxLayout(button)
         self.out_desc = QLabel("Day")
-        #self.out_desc.setFont(QFont('Arial', 10))    
         self.out_desc.setWordWrap(True) 
         self.out_temp = QLabel("--°F")
         self.out_temp.setFont(QFont('Arial', 10))
@@ -48,17 +46,15 @@ class WeatherWidget(QWidget):
     def update_dataset(self, dataset):
         self.dataset = dataset
         self.period = dataset.period
-
-
-        
-        self.out_desc.setText(dataset.day)
+        if(dataset.day==''):
+            self.out_desc.setText(dataset.start_time)
+        else:    
+            self.out_desc.setText(dataset.day)
         self.out_temp.setText(dataset.temp)
         self.out_forecast.setText(dataset.short_forecast)
         
     def on_click(self):
         emiting = self.period
-        print("Period button clicked - emiting " +emiting)
-        #self.out_desc.setText("Clicked!")
         self.clickedValue.emit(emiting)
         
 if __name__ == '__main__':
