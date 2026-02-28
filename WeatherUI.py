@@ -5,7 +5,7 @@ from PyQt5.QtGui import QPixmap, QImage, QFont
 from WeatherWidget import WeatherWidget
 from WeatherDto import WeatherDto
 import Secrets
-import Constanst
+import Constant
 
 # Location be dynamically loaded config class
 WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast/hourly"
@@ -34,7 +34,7 @@ class WeatherUI(QWidget):
         self.timer.timeout.connect(self.refresh)
         self.timer.start(180000)
 
-        self.time_frame=Constanst.DAILY
+        self.time_frame=Constant.DAILY
                          
         self.refresh()
         self.showFullScreen()
@@ -57,25 +57,25 @@ class WeatherUI(QWidget):
         self.btn_location.setCheckable(True)
         self.btn_location.clicked.connect(self.on_btn_location)
         self.btn_location.setMaximumHeight(400)
-        self.btn_location.setFont(QFont('Arial', 14, QFont.Bold))
+        self.btn_location.setFont(Constant.NORMAL_FONT)
 
-        self.btn_time_frame = QPushButton(Constanst.HOURLY, self)
+        self.btn_time_frame = QPushButton(Constant.HOURLY, self)
         self.btn_time_frame.setCheckable(True)
         self.btn_time_frame.clicked.connect(self.on_btn_time_frame)
         self.btn_time_frame.setMaximumHeight(400)
-        self.btn_time_frame.setFont(QFont('Arial', 14, QFont.Bold))
+        self.btn_time_frame.setFont(Constant.NORMAL_FONT)
         self.btn_time_frame.setStyleSheet("text-align: left;") 
         
         self.main_period_desc = QLabel("Current :")
-        self.main_period_desc.setFont(QFont('Arial', 20))
+        self.main_period_desc.setFont(Constant.LARGE_FONT)
         
         self.main_forecast_label = QLabel("----")
-        self.main_forecast_label.setFont(QFont('Arial', 20))
+        self.main_forecast_label.setFont(Constant.LARGE_FONT)
         self.main_forecast_label.setWordWrap(True)
         self.main_forecast_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         self.main_temp_label = QLabel("--°F")
-        self.main_temp_label.setFont(QFont('Arial', 40, QFont.Bold))
+        self.main_temp_label.setFont(Constant.XL_FONT_BOLD)
         
         lower_box= QHBoxLayout()
         
@@ -127,11 +127,18 @@ class WeatherUI(QWidget):
         self.icon_label = QLabel()
     
         vbox = QVBoxLayout()
-        vbox.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
-        vbox.addWidget(self.btn_toggle_size, alignment=Qt.AlignTop | Qt.AlignRight)
-        vbox.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
-        vbox.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
-        vbox.addStretch()
+        upperBox= QHBoxLayout()
+        vboxTopLeft = QVBoxLayout()
+        vboxTopRight = QVBoxLayout()
+
+        vboxTopLeft.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
+        vboxTopLeft.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
+        vboxTopRight.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
+        vboxTopRight.addWidget(self.btn_toggle_size, alignment=Qt.AlignTop | Qt.AlignRight)
+        upperBox.addLayout(vboxTopLeft)
+        upperBox.addLayout(vboxTopRight)
+        vbox.addLayout(upperBox)
+
         vbox.addWidget(self.main_period_desc, alignment=Qt.AlignCenter)
         vbox.addWidget(self.icon_label, alignment=Qt.AlignCenter)
         vbox.addWidget(self.main_temp_label, alignment=Qt.AlignCenter)
@@ -184,14 +191,14 @@ class WeatherUI(QWidget):
         if frame:
             self.main_period = "1"
             #Button shows to switch to hourly
-            self.btn_time_frame.setText(Constanst.DAILY) 
+            self.btn_time_frame.setText(Constant.DAILY) 
             #Logic is set to Hourly
-            self.time_frame=Constanst.HOURLY
+            self.time_frame=Constant.HOURLY
             self.refresh()
         else:
             self.main_period = "1"
-            self.btn_time_frame.setText(Constanst.HOURLY)
-            self.time_frame=Constanst.DAILY
+            self.btn_time_frame.setText(Constant.HOURLY)
+            self.time_frame=Constant.DAILY
             self.refresh()        
             
     def refresh(self):
@@ -206,7 +213,7 @@ class WeatherUI(QWidget):
                 icon = self.parse_response_single_field(forecast_json, item_value="icon")
                 self.update_icon(icon)
             
-            if(self.time_frame==Constanst.DAILY): 
+            if(self.time_frame==Constant.DAILY): 
                 response = requests.get(WEATHER_URL_FORECAST, headers=HEADERS)     
 
             if(response.status_code==200):
@@ -289,12 +296,22 @@ class WeatherUI(QWidget):
         if(dto.period != str("1")): 
             self.main_temp_label.setText(dto.temp)
             self.update_icon(dto.icon)
-        if(self.time_frame==Constanst.DAILY): 
+        if(self.time_frame==Constant.DAILY): 
             self.main_period_desc.setText(dto.full_day+":")
             self.main_forecast_label.setText(dto.long_forecast)
         else:
             self.main_period_desc.setText(dto.start_time+":")
             self.main_forecast_label.setText(dto.short_forecast)
+        self.set_font_size(self.main_forecast_label,len(str(self.main_forecast_label.text())) )
+
+    def set_font_size(self, obj, size):
+        if(size>200):
+            obj.setFont(Constant.SMALL_FONT)
+        elif(size>100):
+            obj.setFont(Constant.NORMAL_FONT)
+        else:
+            obj.setFont(Constant.LARGE_FONT)
+        
         
     def identify_dto(self, period):
         if(self.period_2_dto.period==period):
