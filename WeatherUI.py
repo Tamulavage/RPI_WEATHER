@@ -5,12 +5,13 @@ from PyQt5.QtGui import QPixmap, QImage, QFont
 from WeatherWidget import WeatherWidget
 from WeatherDto import WeatherDto
 import Secrets
-import Constant
+import Constant 
 
 # Location be dynamically loaded config class
 WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast/hourly"
 WEATHER_URL_FORECAST= "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast"
 HEADERS = Secrets.HEADERS
+PICO_URL = "http://"+Secrets.PICO_IP+":80/data"
 
 class WeatherUI(QWidget):
     def __init__(self):
@@ -32,7 +33,7 @@ class WeatherUI(QWidget):
         # Refresh timer: 30 min (1800000)
         self.timer = QTimer()
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(180000)
+        self.timer.start(1800)
 
         self.time_frame=Constant.DAILY
                          
@@ -76,6 +77,10 @@ class WeatherUI(QWidget):
         
         self.main_temp_label = QLabel("--°F")
         self.main_temp_label.setFont(Constant.XL_FONT_BOLD)
+
+        self.pico_label = QLabel("Pico Sensor: Connecting...")
+        self.pico_label.setFont(QFont('Arial', 14))
+        self.pico_label.setStyleSheet("color: #00e5ff;")
         
         lower_box= QHBoxLayout()
         
@@ -131,6 +136,7 @@ class WeatherUI(QWidget):
         vboxTopLeft = QVBoxLayout()
         vboxTopRight = QVBoxLayout()
 
+
         vboxTopLeft.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
         vboxTopLeft.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
         vboxTopRight.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
@@ -138,11 +144,14 @@ class WeatherUI(QWidget):
         upperBox.addLayout(vboxTopLeft)
         upperBox.addLayout(vboxTopRight)
         vbox.addLayout(upperBox)
-
+        
         vbox.addWidget(self.main_period_desc, alignment=Qt.AlignCenter)
         vbox.addWidget(self.icon_label, alignment=Qt.AlignCenter)
         vbox.addWidget(self.main_temp_label, alignment=Qt.AlignCenter)
         vbox.addWidget(self.main_forecast_label)
+
+        if(Constant.LOCAL_TEMP_ON):
+            vbox.addWidget(self.pico_label)
         
         forecast_bar = QWidget()
         forecast_bar.setAutoFillBackground(True)
@@ -243,6 +252,17 @@ class WeatherUI(QWidget):
                     self.period_9_widget.update_dataset(self.period_9_dto)
 
                     self.update_main(self.period_1_dto)
+            
+            if(Constant.LOCAL_TEMP_ON):
+                #p_data = requests.get(PICO_URL, timeout=4).json()
+                local_temp_response = requests.get(PICO_URL, timeout=4)
+                #print(local_temp_response.status_code)
+                if(local_temp_response.status_code==200):
+                    local_temp_json = local_temp_response.json()
+                    self.pico_label.setText(f"Indoor Temp : {local_temp_json['Temp']}°F and Humidity : {local_temp_json['Humidity']} %")
+                else:
+                    self.pico_label.setText("Error connecting...")
+
                 
         except Exception as e:
             print(f"Refresh error: {e}")
