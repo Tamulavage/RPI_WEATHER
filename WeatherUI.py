@@ -5,12 +5,13 @@ from PyQt5.QtGui import QPixmap, QImage, QFont
 from WeatherWidget import WeatherWidget
 from WeatherDto import WeatherDto
 import Secrets
-import Constant
+import Constant 
 
 # Location be dynamically loaded config class
 WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast/hourly"
 WEATHER_URL_FORECAST= "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast"
 HEADERS = Secrets.HEADERS
+PICO_URL = "http://192.168.1.191:80/data"
 
 class WeatherUI(QWidget):
     def __init__(self):
@@ -76,6 +77,10 @@ class WeatherUI(QWidget):
         
         self.main_temp_label = QLabel("--°F")
         self.main_temp_label.setFont(Constant.XL_FONT_BOLD)
+
+        self.pico_label = QLabel("Pico Sensor: Connecting...")
+        self.pico_label.setFont(QFont('Arial', 14))
+        self.pico_label.setStyleSheet("color: #00e5ff;")
         
         lower_box= QHBoxLayout()
         
@@ -143,6 +148,9 @@ class WeatherUI(QWidget):
         vbox.addWidget(self.icon_label, alignment=Qt.AlignCenter)
         vbox.addWidget(self.main_temp_label, alignment=Qt.AlignCenter)
         vbox.addWidget(self.main_forecast_label)
+
+        if(Constant.LOCAL_TEMP_ON):
+            vbox.addWidget(self.pico_label)
         
         forecast_bar = QWidget()
         forecast_bar.setAutoFillBackground(True)
@@ -243,6 +251,11 @@ class WeatherUI(QWidget):
                     self.period_9_widget.update_dataset(self.period_9_dto)
 
                     self.update_main(self.period_1_dto)
+            
+            if(Constant.LOCAL_TEMP_ON):
+                p_data = requests.get(PICO_URL, timeout=4).json()
+                print(p_data)
+                self.pico_label.setText(f"Indoor Temp : {p_data['Temp']}°F and Humidity : {p_data['Humidity']} %")
                 
         except Exception as e:
             print(f"Refresh error: {e}")
