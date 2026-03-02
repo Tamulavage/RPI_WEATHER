@@ -33,7 +33,7 @@ class WeatherUI(QWidget):
         # Refresh timer: 30 min (1800000)
         self.timer = QTimer()
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(180000)
+        self.timer.start(1800)
 
         self.time_frame=Constant.DAILY
                          
@@ -136,6 +136,7 @@ class WeatherUI(QWidget):
         vboxTopLeft = QVBoxLayout()
         vboxTopRight = QVBoxLayout()
 
+
         vboxTopLeft.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
         vboxTopLeft.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
         vboxTopRight.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
@@ -143,7 +144,7 @@ class WeatherUI(QWidget):
         upperBox.addLayout(vboxTopLeft)
         upperBox.addLayout(vboxTopRight)
         vbox.addLayout(upperBox)
-
+        
         vbox.addWidget(self.main_period_desc, alignment=Qt.AlignCenter)
         vbox.addWidget(self.icon_label, alignment=Qt.AlignCenter)
         vbox.addWidget(self.main_temp_label, alignment=Qt.AlignCenter)
@@ -253,9 +254,15 @@ class WeatherUI(QWidget):
                     self.update_main(self.period_1_dto)
             
             if(Constant.LOCAL_TEMP_ON):
-                p_data = requests.get(PICO_URL, timeout=4).json()
-                print(p_data)
-                self.pico_label.setText(f"Indoor Temp : {p_data['Temp']}°F and Humidity : {p_data['Humidity']} %")
+                #p_data = requests.get(PICO_URL, timeout=4).json()
+                local_temp_response = requests.get(PICO_URL, timeout=4)
+                #print(local_temp_response.status_code)
+                if(local_temp_response.status_code==200):
+                    local_temp_json = local_temp_response.json()
+                    self.pico_label.setText(f"Indoor Temp : {local_temp_json['Temp']}°F and Humidity : {local_temp_json['Humidity']} %")
+                else:
+                    self.pico_label.setText("Error connecting...")
+
                 
         except Exception as e:
             print(f"Refresh error: {e}")
