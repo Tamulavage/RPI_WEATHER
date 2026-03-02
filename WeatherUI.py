@@ -11,7 +11,7 @@ import Constant
 WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast/hourly"
 WEATHER_URL_FORECAST= "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast"
 HEADERS = Secrets.HEADERS
-PICO_URL = "http://192.168.1.191:80/data"
+PICO_URL = "http://"+Secrets.PICO_IP+":80/data"
 
 class WeatherUI(QWidget):
     def __init__(self):
