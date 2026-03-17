@@ -33,7 +33,7 @@ class WeatherUI(QWidget):
         # Refresh timer: 30 min (1800000)
         self.timer = QTimer()
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(1800)
+        self.timer.start(1800000)
 
         self.time_frame=Constant.DAILY
                          
@@ -78,45 +78,53 @@ class WeatherUI(QWidget):
         self.main_temp_label = QLabel("--°F")
         self.main_temp_label.setFont(Constant.XL_FONT_BOLD)
 
-        self.pico_label = QLabel("Pico Sensor: Connecting...")
-        self.pico_label.setFont(QFont('Arial', 14))
-        self.pico_label.setStyleSheet("color: #00e5ff;")
+        self.indoor_label_desc = QLabel("Indoors :")
+        self.indoor_label_desc.setFont(Constant.LARGE_FONT)
+        self.indoor_temp = QLabel("Connecting...")
+        self.indoor_temp.setFont(Constant.XL_FONT_BOLD)
+        self.indoor_temp.setStyleSheet(Constant.LIGHT_BLUE)
+        self.indoor_humidity = QLabel("...")
+        self.indoor_humidity.setFont(Constant.NORMAL_FONT)
+        self.indoor_humidity.setStyleSheet(Constant.LIGHT_BLUE)
+        self.indoor_air_qlty = QLabel("...")
+        self.indoor_air_qlty.setFont(Constant.NORMAL_FONT)
+        self.indoor_air_qlty.setStyleSheet(Constant.LIGHT_BLUE)
         
         lower_box= QHBoxLayout()
         
-        self.period_1_widget  = WeatherWidget()
+        self.period_1_widget = WeatherWidget()
         self.period_1_widget.clickedValue.connect(self.period_clicked)
         self.period_1_widget.update_dataset(self.period_1_dto)
         
-        self.period_2_widget  = WeatherWidget()
+        self.period_2_widget = WeatherWidget()
         self.period_2_widget.clickedValue.connect(self.period_clicked)
         self.period_2_widget.update_dataset(self.period_2_dto)
         
-        self.period_3_widget  = WeatherWidget()
+        self.period_3_widget = WeatherWidget()
         self.period_3_widget.clickedValue.connect(self.period_clicked)
         self.period_3_widget.update_dataset(self.period_3_dto)
         
-        self.period_4_widget  = WeatherWidget()
+        self.period_4_widget = WeatherWidget()
         self.period_4_widget.clickedValue.connect(self.period_clicked)
         self.period_4_widget.update_dataset(self.period_4_dto)
         
-        self.period_5_widget  = WeatherWidget()
+        self.period_5_widget = WeatherWidget()
         self.period_5_widget.clickedValue.connect(self.period_clicked)
         self.period_5_widget.update_dataset(self.period_5_dto)
         
-        self.period_6_widget  = WeatherWidget()
+        self.period_6_widget = WeatherWidget()
         self.period_6_widget.clickedValue.connect(self.period_clicked)
         self.period_6_widget.update_dataset(self.period_6_dto)
         
-        self.period_7_widget  = WeatherWidget()
+        self.period_7_widget = WeatherWidget()
         self.period_7_widget.clickedValue.connect(self.period_clicked)
         self.period_7_widget.update_dataset(self.period_7_dto)
         
-        self.period_8_widget  = WeatherWidget()
+        self.period_8_widget = WeatherWidget()
         self.period_8_widget.clickedValue.connect(self.period_clicked)
         self.period_8_widget.update_dataset(self.period_8_dto)
         
-        self.period_9_widget  = WeatherWidget()
+        self.period_9_widget = WeatherWidget()
         self.period_9_widget.clickedValue.connect(self.period_clicked)
         self.period_9_widget.update_dataset(self.period_9_dto)         
         
@@ -145,13 +153,26 @@ class WeatherUI(QWidget):
         upperBox.addLayout(vboxTopRight)
         vbox.addLayout(upperBox)
         
-        vbox.addWidget(self.main_period_desc, alignment=Qt.AlignCenter)
-        vbox.addWidget(self.icon_label, alignment=Qt.AlignCenter)
-        vbox.addWidget(self.main_temp_label, alignment=Qt.AlignCenter)
-        vbox.addWidget(self.main_forecast_label)
+        inner_middle_layout = QHBoxLayout()
 
+        inner_main_layout = QVBoxLayout()
+        inner_main_layout.addWidget(self.main_period_desc, alignment=Qt.AlignCenter)
+        inner_main_layout.addWidget(self.icon_label, alignment=Qt.AlignCenter)
+        inner_main_layout.addWidget(self.main_temp_label, alignment=Qt.AlignCenter)
+
+        inner_middle_layout.addLayout(inner_main_layout)
+             
         if(Constant.LOCAL_TEMP_ON):
-            vbox.addWidget(self.pico_label)
+            inner_local_sensor_layout = QVBoxLayout()
+            inner_local_sensor_layout.addWidget(self.indoor_label_desc)
+            inner_local_sensor_layout.addWidget(self.indoor_temp)
+            inner_local_sensor_layout.addWidget(self.indoor_humidity)
+            inner_local_sensor_layout.addWidget(self.indoor_air_qlty)
+            inner_middle_layout.addLayout(inner_local_sensor_layout)
+
+        vbox.addLayout(inner_middle_layout)
+
+        vbox.addWidget(self.main_forecast_label)
         
         forecast_bar = QWidget()
         forecast_bar.setAutoFillBackground(True)
@@ -254,18 +275,30 @@ class WeatherUI(QWidget):
                     self.update_main(self.period_1_dto)
             
             if(Constant.LOCAL_TEMP_ON):
-                #p_data = requests.get(PICO_URL, timeout=4).json()
                 local_temp_response = requests.get(PICO_URL, timeout=4)
-                #print(local_temp_response.status_code)
                 if(local_temp_response.status_code==200):
                     local_temp_json = local_temp_response.json()
-                    self.pico_label.setText(f"Indoor Temp : {local_temp_json['Temp']}°F and Humidity : {local_temp_json['Humidity']} %")
+                    self.indoor_label_desc.setText("Indoors :")
+                    self.indoor_temp.setText(str(local_temp_json['Temp'] )+" °F")
+                    self.indoor_humidity.setText("Humidity: " + str(local_temp_json['Humidity'])+ " %")
+                    self.determine_air_qty(local_temp_json['co2_ppm'], "CO2",  850, 1800)
                 else:
-                    self.pico_label.setText("Error connecting...")
+                    self.indoor_label_desc.setText("Error connecting...")
 
                 
         except Exception as e:
             print(f"Refresh error: {e}")
+
+    def determine_air_qty(self, ppm, gas, normal,  high):
+        if ppm > high:
+            self.indoor_air_qlty.setText(gas + " ELEVATED")         
+            self.indoor_air_qlty.setStyleSheet(Constant.VIVID_RED)
+        elif ppm > normal:
+            self.indoor_air_qlty.setText(gas + " HIGH")
+            self.indoor_air_qlty.setStyleSheet(Constant.YELLOW)
+        else:
+            self.indoor_air_qlty.setText(gas + " Normal")
+            self.indoor_air_qlty.setStyleSheet(Constant.LIGHT_BLUE)
             
     def update_dto(self, period_dto, period, forecast_json):
             temp, name, short, long, icon , start_time = self.parse_response_multi_field(forecast_json, period)
