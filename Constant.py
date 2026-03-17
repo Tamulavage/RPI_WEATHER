@@ -10,4 +10,9 @@ NORMAL_FONT_BOLD= QFont('Arial', 16, QFont.Bold)
 LARGE_FONT= QFont('Arial', 20, QFont.Bold)
 XL_FONT_BOLD= QFont('Arial', 40, QFont.Bold)
 
+
+LIGHT_BLUE= "color: #00e5ff;"
+VIVID_RED= "color: #ff001a;"
+YELLOW= "color: #FFFF00;"
+
 LOCAL_TEMP_ON = True
