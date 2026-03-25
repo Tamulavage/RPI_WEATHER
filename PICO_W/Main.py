@@ -23,7 +23,7 @@ app = Microdot()
 led = Pin('LED', Pin.OUT)
 ip = connect_wifi()
 temp = Temp.Temp(16)
-mq135 = Gas.Gas(27)
+mq135 = Gas.Gas(27, logger_on=LOGGER_ON)
 
 async def heartbeat():
     while True:
@@ -85,5 +85,3 @@ try:
 except Exception as e:
     if(LOGGER_ON):
         print(f"Error: {e}")
-        
-
