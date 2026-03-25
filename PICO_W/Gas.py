@@ -51,7 +51,7 @@ class Gas:
             return 0
         
     def is_warm(self):
-        return self._warmed;
+        return self._warmed
         
     def read_sensor(self, gas):
         #Reads sensor data and prints Rs or PPM values based on mode.
@@ -76,7 +76,6 @@ class Gas:
                 print(f"Rs: {rs:.2f} kΩ")
             return rs
         else:
-            #ppm = self.get_ppm(rs)
             ppm = self.get_ppm(rs,gas)
             if(self._logger_on):
                 print(f"Raw ADC: {raw_reading}, Vout: {vout:.2f}V, Rs: {rs:.2f} kΩ, PPM: {ppm:.2f}")
