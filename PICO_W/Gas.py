@@ -83,8 +83,13 @@ class Gas:
         
     
 if __name__ == "__main__":
-    #gas = Gas(27, logger_on=True)
-    gas = Gas(27,callibration_mode=True,logger_on=True)
+    calibration = input("Enter 'c' for calibration mode").lower() == 'c'
+    if calibration:
+        print("Calibration mode selected. Please ensure the sensor is in clean air.")
+        gas = Gas(27,callibration_mode=True,logger_on=True)
+    else:
+        gas = Gas(27, logger_on=True)
+    
 
     try:
         while True:
