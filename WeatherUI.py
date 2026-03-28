@@ -140,18 +140,18 @@ class WeatherUI(QWidget):
         self.icon_label = QLabel()
     
         vbox = QVBoxLayout()
-        upperBox= QHBoxLayout()
-        vboxTopLeft = QVBoxLayout()
-        vboxTopRight = QVBoxLayout()
+        upper_box= QHBoxLayout()
+        vbox_top_left = QVBoxLayout()
+        vbox_top_right = QVBoxLayout()
 
 
-        vboxTopLeft.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
-        vboxTopLeft.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
-        vboxTopRight.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
-        vboxTopRight.addWidget(self.btn_toggle_size, alignment=Qt.AlignTop | Qt.AlignRight)
-        upperBox.addLayout(vboxTopLeft)
-        upperBox.addLayout(vboxTopRight)
-        vbox.addLayout(upperBox)
+        vbox_top_left.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
+        vbox_top_left.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
+        vbox_top_right.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
+        vbox_top_right.addWidget(self.btn_toggle_size, alignment=Qt.AlignTop | Qt.AlignRight)
+        upper_box.addLayout(vbox_top_left)
+        upper_box.addLayout(vbox_top_right)
+        vbox.addLayout(upper_box)
         
         inner_middle_layout = QHBoxLayout()
 
