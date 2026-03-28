@@ -2,6 +2,8 @@
 
 A PyQt5-based weather display application that combines NOAA weather forecast data with local sensor readings from a Raspberry Pi Pico W microcontroller.
 
+Display tested on a 7 inch touchscreen with a Raspberry Pi 3b+
+
 ## Features
 
 ### Desktop Application
@@ -101,9 +103,13 @@ WIFI_PASSWORD = "YOUR_WIFI_PASSWORD"
 5. **Quit** - use the Quit button to exit the full-screen display
 
 ## API Endpoints (Pico W)
-
 - `/temp` - Returns current temperature and humidity
 - `/data` - Returns complete sensor data including air quality
+- `/gas` - IN PROGRESS # TODO: determine specifc PPM per input
+- `/warm` - Boolean: is the sensor is warmed up
+          - MQ sensors can take 24 hours for burn in phase
+          - 1 to 2 min after initial burn in phase
+          - customizible with defualt set to 60 seconds
 
 ## Configuration
 
@@ -128,3 +134,25 @@ Edit `Constant.py` for UI preferences:
 - [ ] Array-based period management (replace individual period objects)
 - [ ] Advanced weather alerts and notifications
 - [ ] Multi-location support
+- [ ] Increased Air quality sensor data
+- [ ] GUI 
+
+
+# Quick start test
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov
+
+# Run only Pico integration tests
+pytest -m pico
+
+# Run only unit tests
+pytest -m unit
+
+# Run specific test file
+pytest tests/test_pico_integration.py -v

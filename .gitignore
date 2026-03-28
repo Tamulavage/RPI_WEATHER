@@ -9,6 +9,8 @@ Secrets.*
 */Secrets.*
 __pycache__/*
 
+.vscode/*
+
 # C extensions
 *.so
 

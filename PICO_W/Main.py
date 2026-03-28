@@ -36,32 +36,32 @@ async def heartbeat():
 async def get_data(request):
     if(LOGGER_ON):
         print(f"sensor data requested from {request.headers.get('User-Agent')} at {request.headers.get('request-start-time')}")
-    tempF = temp.getTempF()
-    hum = temp.getHumidity()
+    temp_f = temp.get_temp_f()
+    hum = temp.get_humidity()
     if(LOGGER_ON):
-        print(f"Temp: {tempF} Humidity : {hum}")
-    return {'Temp': round(tempF, 1) , 'Humidity':hum }, 200
+        print(f"Temp: {temp_f} Humidity : {hum}")
+    return {'Temp': round(temp_f, 1) , 'Humidity':hum }, 200
 
 @app.route('/data')
 async def get_data(request):
     if(LOGGER_ON):
         print(f"sensor data requested from {request.headers.get('User-Agent')} at {request.headers.get('request-start-time')}")
-    tempF = temp.getTempF()
-    hum = temp.getHumidity()
+    temp_f = temp.get_temp_f()
+    hum = temp.get_humidity()
     co2_ppm = mq135.read_sensor(gas=Constant.CO2)
     smoke_ppm = mq135.read_sensor(gas=Constant.Smoke)
     if(LOGGER_ON):
-        print(f"Temp: {tempF} Humidity : {hum} co2_ppm: {co2_ppm} smoke_ppm: {smoke_ppm}")
-    return {'Temp': round(tempF, 1) , 'Humidity':hum , 'co2_ppm': round(co2_ppm, 2), 'smoke_ppm': round(smoke_ppm, 2)}, 200
+        print(f"Temp: {temp_f} Humidity : {hum} co2_ppm: {co2_ppm} smoke_ppm: {smoke_ppm}")
+    return {'Temp': round(temp_f, 1) , 'Humidity':hum , 'co2_ppm': round(co2_ppm, 2), 'smoke_ppm': round(smoke_ppm, 2)}, 200
 
 @app.route('/gas')
 async def get_gas(request):
     if(LOGGER_ON):
         print(f"sensor data requested from {request.headers.get('User-Agent')} at {request.headers.get('request-start-time')}")
-    gas_ppm = mq135.read_sensor(gas=Constant.CO2)
+    co2_ppm = mq135.read_sensor(gas=Constant.CO2)
     if(LOGGER_ON):
         print(f"co2_ppm: {co2_ppm}")
-    return {'co2_ppm': round(gas_ppm, 2) }, 200
+    return {'co2_ppm': round(co2_ppm, 2) }, 200
 
 @app.route('/warm')
 async def get_warm_status(request):
