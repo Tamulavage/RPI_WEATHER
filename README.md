@@ -43,7 +43,7 @@ weather/
 ## Requirements
 
 ### Desktop Application
-- Python 3.7+
+- Python 3.9+ recommended
 - PyQt5
 - requests
 - Internet connection for NOAA weather API
@@ -58,8 +58,9 @@ weather/
 
 ### Desktop Setup
 
-1. Install dependencies:
+1. Install dependencies :
 ```bash
+pip install --upgrade PyQt5 PyQt5-sip
 pip install PyQt5 requests
 ```
 
@@ -131,28 +132,7 @@ Edit `Constant.py` for UI preferences:
 
 ## Future Improvements
 
-- [ ] Array-based period management (replace individual period objects)
 - [ ] Advanced weather alerts and notifications
 - [ ] Multi-location support
 - [ ] Increased Air quality sensor data
 - [ ] GUI 
-
-
-# Quick start test
-# Install test dependencies
-pip install -r requirements-test.txt
-
-# Run all tests
-pytest
-
-# Run with coverage report
-pytest --cov
-
-# Run only Pico integration tests
-pytest -m pico
-
-# Run only unit tests
-pytest -m unit
-
-# Run specific test file
-pytest tests/test_pico_integration.py -v

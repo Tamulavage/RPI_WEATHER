@@ -1,6 +1,8 @@
 from typing import Final
 from PyQt5.QtGui import  QFont
 
+REQUEST_TIMEOUT_SECONDS: Final[int] = 1
+
 HOURLY: Final[str] = "Hourly"
 DAILY: Final[str] = "Daily"
 

@@ -1,32 +1,33 @@
-import sys, requests
-from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout ,QPushButton, QLabel, QVBoxLayout, QSizePolicy
-from PyQt5.QtCore import QTimer,Qt
-from PyQt5.QtGui import QPixmap, QImage, QFont
-from WeatherWidget import WeatherWidget
-from WeatherDto import WeatherDto
-import Secrets
-import Constant 
+import sys,requests 
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
-# Location be dynamically loaded config class
-WEATHER_URL_HOURLY = "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast/hourly"
-WEATHER_URL_FORECAST= "https://api.weather.gov/gridpoints/"+Secrets.LOCATION+"/forecast"
+import Constant
+import Secrets
+from WeatherDto import WeatherDto
+from WeatherWidget import WeatherWidget
+
+# Location could be loaded from a config class in the future.
+WEATHER_URL_HOURLY = f"https://api.weather.gov/gridpoints/{Secrets.LOCATION}/forecast/hourly"
+WEATHER_URL_FORECAST = f"https://api.weather.gov/gridpoints/{Secrets.LOCATION}/forecast"
 HEADERS = Secrets.HEADERS
-PICO_URL = "http://"+Secrets.PICO_IP+":80/data"
+PICO_URL = f"http://{Secrets.PICO_IP}:80/data"
 
 class WeatherUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.main_period="1"
-        #TODO : switch to array
-        self.period_1_dto = WeatherDto("1")
-        self.period_2_dto = WeatherDto("2")
-        self.period_3_dto = WeatherDto("3")
-        self.period_4_dto = WeatherDto("4")
-        self.period_5_dto = WeatherDto("5")
-        self.period_6_dto = WeatherDto("6")
-        self.period_7_dto = WeatherDto("7")
-        self.period_8_dto = WeatherDto("8")
-        self.period_9_dto = WeatherDto("9")
+        self.main_period = "1"
+        self.period_dtos = [WeatherDto(str(index)) for index in range(1, 10)]
+        self.period_widgets = []
         
         self.init_Weather_UI()
         
@@ -53,7 +54,7 @@ class WeatherUI(QWidget):
         self.btn_toggle_size.setMaximumWidth(80) 
         self.btn_toggle_size.setMaximumHeight(40)
         
-        # TODO: add code to switch location: Switch to drop down 
+        # Location selection can later be switched to a dropdown.
         self.btn_location = QPushButton('Wilmington', self)
         self.btn_location.setCheckable(True)
         self.btn_location.clicked.connect(self.on_btn_location)
@@ -90,52 +91,15 @@ class WeatherUI(QWidget):
         self.indoor_air_qlty.setFont(Constant.NORMAL_FONT)
         self.indoor_air_qlty.setStyleSheet(Constant.LIGHT_BLUE)
         
-        lower_box= QHBoxLayout()
-        
-        self.period_1_widget = WeatherWidget()
-        self.period_1_widget.clickedValue.connect(self.period_clicked)
-        self.period_1_widget.update_dataset(self.period_1_dto)
-        
-        self.period_2_widget = WeatherWidget()
-        self.period_2_widget.clickedValue.connect(self.period_clicked)
-        self.period_2_widget.update_dataset(self.period_2_dto)
-        
-        self.period_3_widget = WeatherWidget()
-        self.period_3_widget.clickedValue.connect(self.period_clicked)
-        self.period_3_widget.update_dataset(self.period_3_dto)
-        
-        self.period_4_widget = WeatherWidget()
-        self.period_4_widget.clickedValue.connect(self.period_clicked)
-        self.period_4_widget.update_dataset(self.period_4_dto)
-        
-        self.period_5_widget = WeatherWidget()
-        self.period_5_widget.clickedValue.connect(self.period_clicked)
-        self.period_5_widget.update_dataset(self.period_5_dto)
-        
-        self.period_6_widget = WeatherWidget()
-        self.period_6_widget.clickedValue.connect(self.period_clicked)
-        self.period_6_widget.update_dataset(self.period_6_dto)
-        
-        self.period_7_widget = WeatherWidget()
-        self.period_7_widget.clickedValue.connect(self.period_clicked)
-        self.period_7_widget.update_dataset(self.period_7_dto)
-        
-        self.period_8_widget = WeatherWidget()
-        self.period_8_widget.clickedValue.connect(self.period_clicked)
-        self.period_8_widget.update_dataset(self.period_8_dto)
-        
-        self.period_9_widget = WeatherWidget()
-        self.period_9_widget.clickedValue.connect(self.period_clicked)
-        self.period_9_widget.update_dataset(self.period_9_dto)         
-        
-        lower_box.addLayout(self.period_2_widget.get_layout())
-        lower_box.addLayout(self.period_3_widget.get_layout())
-        lower_box.addLayout(self.period_4_widget.get_layout())
-        lower_box.addLayout(self.period_5_widget.get_layout())
-        lower_box.addLayout(self.period_6_widget.get_layout())
-        lower_box.addLayout(self.period_7_widget.get_layout())
-        lower_box.addLayout(self.period_8_widget.get_layout())
-        lower_box.addLayout(self.period_9_widget.get_layout())
+        lower_box = QHBoxLayout()
+
+        self.period_widgets = []
+        for period_dto in self.period_dtos[1:]:
+            period_widget = WeatherWidget()
+            period_widget.clickedValue.connect(self.period_clicked)
+            period_widget.update_dataset(period_dto)
+            self.period_widgets.append(period_widget)
+            lower_box.addLayout(period_widget.get_layout())
         
         self.icon_label = QLabel()
     
@@ -186,33 +150,27 @@ class WeatherUI(QWidget):
         self.setWindowTitle('Weather')
         self.setStyleSheet("background-color: #121212; color: white;")
                 
-    def on_btn_toggle_size(self, fullScreen):
-        self.toggle_full_screen(fullScreen)
-        
-    def toggle_full_screen(self,fullScreen):
-        if fullScreen:
+    def on_btn_toggle_size(self, full_screen):
+        self.toggle_full_screen(full_screen)
+
+    def toggle_full_screen(self, full_screen):
+        if full_screen:
             self.showNormal()
             self.btn_toggle_size.setText('Max')
         else:
             self.showFullScreen()
             self.btn_toggle_size.setText('Min')
         self.refresh()
-            
-    #Currently between 2 locations: CHange to dropdown/dynamic populated
-    def on_btn_location(self, location):
-        
+
+    # Currently only a refresh action; multi-location support can be added later.
+    def on_btn_location(self, _checked):
         self.main_period_desc.setText("Current :")
-        self.toggle_location(location)      
-        
-    def toggle_location(self,location):
-        if location:
-            print("switch location - not turned on yet - refresh only now")
-            self.main_period = "1"
-            self.refresh()
-        else:
-            print("switch location - not turned on yet - refresh only now")
-            self.main_period = "1"
-            self.refresh()
+        self.toggle_location()
+
+    def toggle_location(self):
+        print("switch location - not turned on yet - refresh only now")
+        self.main_period = "1"
+        self.refresh()
 
     def on_btn_time_frame(self, frame):
         self.toggle_time_frame(frame) 
@@ -233,61 +191,54 @@ class WeatherUI(QWidget):
             
     def refresh(self):
         try:
-            
-            # Use hourly to get more accurate current temp
-            response = requests.get(WEATHER_URL_HOURLY, headers=HEADERS)
-            if(response.status_code==200):
-                forecast_json = response.json()
-                temp = self.parse_response_single_field(forecast_json)
-                self.main_temp_label.setText(temp+" °F")
-                icon = self.parse_response_single_field(forecast_json, item_value="icon")
-                self.update_icon(icon)
-            
-            if(self.time_frame==Constant.DAILY): 
-                response = requests.get(WEATHER_URL_FORECAST, headers=HEADERS)     
-
-            if(response.status_code==200):
-                forecast_json = response.json()
-      
-                # If not not current period , then do not auto refresh
-                if(str(self.main_period) == str("1")):
-
-                    # Can this be move to array of DTOs?
-                    self.period_1_dto=self.update_dto(self.period_1_dto, 1, forecast_json)
-                    self.period_1_widget.update_dataset(self.period_1_dto)
-                    self.period_2_dto=self.update_dto(self.period_2_dto, 2, forecast_json)
-                    self.period_2_widget.update_dataset(self.period_2_dto)
-                    self.period_3_dto=self.update_dto(self.period_3_dto, 3, forecast_json)
-                    self.period_3_widget.update_dataset(self.period_3_dto)
-                    self.period_4_dto=self.update_dto(self.period_4_dto, 4, forecast_json)
-                    self.period_4_widget.update_dataset(self.period_4_dto)
-                    self.period_5_dto=self.update_dto(self.period_5_dto, 5, forecast_json)
-                    self.period_5_widget.update_dataset(self.period_5_dto)
-                    self.period_6_dto=self.update_dto(self.period_6_dto, 6, forecast_json)
-                    self.period_6_widget.update_dataset(self.period_6_dto)
-                    self.period_7_dto=self.update_dto(self.period_7_dto, 7, forecast_json)
-                    self.period_7_widget.update_dataset(self.period_7_dto)
-                    self.period_8_dto=self.update_dto(self.period_8_dto, 8, forecast_json)
-                    self.period_8_widget.update_dataset(self.period_8_dto)
-                    self.period_9_dto=self.update_dto(self.period_9_dto, 9, forecast_json)
-                    self.period_9_widget.update_dataset(self.period_9_dto)
-
-                    self.update_main(self.period_1_dto)
-            
-            if(Constant.LOCAL_TEMP_ON):
-                local_temp_response = requests.get(PICO_URL, timeout=4)
-                if(local_temp_response.status_code==200):
-                    local_temp_json = local_temp_response.json()
-                    self.indoor_label_desc.setText("Indoors :")
-                    self.indoor_temp.setText(str(local_temp_json['Temp'] )+" °F")
-                    self.indoor_humidity.setText("Humidity: " + str(local_temp_json['Humidity'])+ " %")
-                    self.determine_air_qty(local_temp_json['co2_ppm'], "CO2",  850, 1800)
-                else:
-                    self.indoor_label_desc.setText("Error connecting...")
-
-                
+            self.update_current_conditions()
+            self.update_forecast_periods()
+            if Constant.LOCAL_TEMP_ON:
+                self.update_local_sensor_data()
         except Exception as e:
             print(f"Refresh error: {e}")
+            self.main_period_desc.setText("Error fetching data")
+            
+
+    def update_current_conditions(self):
+        response = requests.get(WEATHER_URL_HOURLY, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
+        if response.status_code != 200:
+            return
+
+        forecast_json = response.json()
+        temp = self.parse_response_single_field(forecast_json)
+        self.main_temp_label.setText(f"{temp} °F")
+        icon = self.parse_response_single_field(forecast_json, item_value="icon")
+        self.update_icon(icon)
+
+    def update_forecast_periods(self):
+        forecast_url = WEATHER_URL_FORECAST if self.time_frame == Constant.DAILY else WEATHER_URL_HOURLY
+        response = requests.get(forecast_url, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
+        if response.status_code != 200 or str(self.main_period) != "1":
+            return
+
+        forecast_json = response.json()
+        for index, period_dto in enumerate(self.period_dtos, start=1):
+            updated_dto = self.update_dto(period_dto, index, forecast_json)
+            self.period_dtos[index - 1] = updated_dto
+            if index > 1:
+                self.period_widgets[index - 2].update_dataset(updated_dto)
+
+        self.update_main(self.period_dtos[0])
+
+    def update_local_sensor_data(self):
+        try:
+            local_temp_response = requests.get(PICO_URL, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
+            local_temp_response.raise_for_status()
+            local_temp_json = local_temp_response.json()
+            self.indoor_label_desc.setText("Indoors :")
+            self.indoor_temp.setText(f"{local_temp_json['Temp']} °F")
+            self.indoor_humidity.setText(f"Humidity: {local_temp_json['Humidity']} %")
+            self.determine_air_qty(local_temp_json['co2_ppm'], "CO2", 850, 1800)
+        except requests.RequestException as exc:
+            print(f"Local sensor update error: {exc}")
+            self.indoor_label_desc.setText("Error connecting...")
+            return
 
     def determine_air_qty(self, ppm, gas, normal,  high):
         if ppm > high:
@@ -305,40 +256,43 @@ class WeatherUI(QWidget):
             period_dto.update(day=name, temp=temp, short=short, long=long, icon=icon, start_time=start_time)
             return period_dto
             
-    def parse_response_single_field(self, response, period = 1, item_value="temperature"):
-        periods = response["properties"]["periods"]
-        for item in periods:
-            #print("day: " , item["name"] , " Temp: " , item["temperature"], " Forecast: ", item["detailedForecast"])
-            if item["number"] == period:
-                value = item[item_value]
-                break
-        return str(value)
-    
-    def parse_response_multi_field(self, response, period = 1,
-                                    item_1="temperature",
-                                    item_2="name",
-                                    item_3="shortForecast",
-                                    item_4="detailedForecast",
-                                    item_5="icon",
-                                    item_6="startTime"):
-        periods = response["properties"]["periods"]
-        for item in periods:
-            #print("day: " , item["name"] , " Temp: " , item["temperature"], " Forcast: ", item["detailedForecast"])
-            if item["number"] == period:
-                value1 = item[item_1]
-                value2 = item[item_2]
-                value3 = item[item_3]
-                value4 = item[item_4]
-                value5 = item[item_5]
-                value6 = item[item_6]
-                break
-        return str(value1), str(value2),str(value3) ,str(value4),str(value5),str(value6)
+    def parse_response_single_field(self, response, period=1, item_value="temperature"):
+        periods = response.get("properties", {}).get("periods", [])
+        matched_period = next((item for item in periods if item.get("number") == period), {})
+        return str(matched_period.get(item_value, ""))
+
+    def parse_response_multi_field(
+        self,
+        response,
+        period=1,
+        item_1="temperature",
+        item_2="name",
+        item_3="shortForecast",
+        item_4="detailedForecast",
+        item_5="icon",
+        item_6="startTime",
+    ):
+        periods = response.get("properties", {}).get("periods", [])
+        matched_period = next((item for item in periods if item.get("number") == period), {})
+        return (
+            str(matched_period.get(item_1, "")),
+            str(matched_period.get(item_2, "")),
+            str(matched_period.get(item_3, "")),
+            str(matched_period.get(item_4, "")),
+            str(matched_period.get(item_5, "")),
+            str(matched_period.get(item_6, "")),
+        )
 
     def update_icon(self, url):
-        img_data = requests.get(f"{url}").content
+        try:
+            img_data = requests.get(url, timeout=Constant.REQUEST_TIMEOUT_SECONDS).content
+        except requests.RequestException as exc:
+            print(f"Icon update error: {exc}")
+            return
+
         img = QImage()
-        img.loadFromData(img_data)
-        self.icon_label.setPixmap(QPixmap.fromImage(img))
+        if img.loadFromData(img_data):
+            self.icon_label.setPixmap(QPixmap.fromImage(img))
         
     def period_clicked(self, period):
         self.update_main(self.identify_dto(period))
@@ -367,26 +321,14 @@ class WeatherUI(QWidget):
         
         
     def identify_dto(self, period):
-        if(self.period_2_dto.period==period):
-            return self.period_2_dto
-        if(self.period_3_dto.period==period):
-            return self.period_3_dto
-        if(self.period_4_dto.period==period):
-            return self.period_4_dto
-        if(self.period_5_dto.period==period):
-            return self.period_5_dto
-        if(self.period_6_dto.period==period):
-            return self.period_6_dto
-        if(self.period_7_dto.period==period):
-            return self.period_7_dto
-        if(self.period_8_dto.period==period):
-            return self.period_8_dto
-        if(self.period_9_dto.period==period):
-            return self.period_9_dto
+        for period_dto in self.period_dtos:
+            if period_dto.period == period:
+                return period_dto
+        return self.period_dtos[0]
 
 def main():
     app = QApplication(sys.argv)
-    window =WeatherUI()
+    app.main_window = WeatherUI()
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
