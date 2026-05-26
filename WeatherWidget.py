@@ -25,12 +25,15 @@ class WeatherWidget(QWidget):
         self.out_desc.setWordWrap(True) 
         self.out_temp = QLabel("--°F")
         self.out_temp.setFont(QFont('Arial', 10))
+        self.out_high_low = QLabel("")
+        self.out_high_low.setFont(QFont('Arial', 9))
         self.out_forecast = QLabel("Forecast")
         self.out_forecast.setWordWrap(True)
         self.out_forecast.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         inner_layout.addWidget(self.out_desc)
         inner_layout.addWidget(self.out_temp)
+        inner_layout.addWidget(self.out_high_low)
         inner_layout.addWidget(self.out_forecast)
         
         self.mainLayout.addWidget(button)
@@ -48,9 +51,20 @@ class WeatherWidget(QWidget):
         self.period = dataset.period
         if(dataset.day==''):
             self.out_desc.setText(dataset.start_time)
+            self.out_high_low.hide()
+            self.out_temp.show()
         else:    
             self.out_desc.setText(dataset.day)
+            self.out_high_low.show()
+            self.out_temp.hide()
         self.out_temp.setText(dataset.temp)
+        
+        # Show high/low if available
+        if dataset.temp_high and dataset.temp_low:
+            self.out_high_low.setText(f"Hi: {dataset.temp_high}  Lo: {dataset.temp_low}")
+        else:
+            self.out_high_low.setText("")
+        
         self.out_forecast.setText(dataset.short_forecast)
         
     def on_click(self):

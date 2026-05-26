@@ -26,7 +26,7 @@ class WeatherUI(QWidget):
     def __init__(self):
         super().__init__()
         self.main_period = "1"
-        self.period_dtos = [WeatherDto(str(index)) for index in range(1, 10)]
+        self.period_dtos = [WeatherDto(str(index)) for index in range(1, 8)]
         self.period_widgets = []
         
         self.init_Weather_UI()
@@ -37,7 +37,7 @@ class WeatherUI(QWidget):
         self.timer.start(1800000)
 
         self.time_frame=Constant.DAILY
-                         
+                                 
         self.refresh()
         self.showFullScreen()
         
@@ -54,7 +54,7 @@ class WeatherUI(QWidget):
         self.btn_toggle_size.setMaximumWidth(80) 
         self.btn_toggle_size.setMaximumHeight(40)
         
-        # Location selection can later be switched to a dropdown.
+        #TODO Location selection can later be switched to a dropdown.
         self.btn_location = QPushButton('Wilmington', self)
         self.btn_location.setCheckable(True)
         self.btn_location.clicked.connect(self.on_btn_location)
@@ -67,8 +67,14 @@ class WeatherUI(QWidget):
         self.btn_time_frame.setMaximumHeight(400)
         self.btn_time_frame.setFont(Constant.NORMAL_FONT)
         self.btn_time_frame.setStyleSheet("text-align: left;") 
+
+        self.current_desc = QLabel("Current :")
+        self.current_desc.setFont(Constant.LARGE_FONT)
         
-        self.main_period_desc = QLabel("Current :")
+        self.current_temp_label = QLabel("--°F")
+        self.current_temp_label.setFont(Constant.XL_FONT_BOLD)
+        
+        self.main_period_desc = QLabel("Time Frame :")
         self.main_period_desc.setFont(Constant.LARGE_FONT)
         
         self.main_forecast_label = QLabel("----")
@@ -77,7 +83,10 @@ class WeatherUI(QWidget):
         self.main_forecast_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         self.main_temp_label = QLabel("--°F")
-        self.main_temp_label.setFont(Constant.XL_FONT_BOLD)
+        self.main_temp_label.setFont(Constant.XL_FONT_BOLD)        
+        self.main_high_low_label = QLabel("--°F")
+        self.main_high_low_label.setFont(Constant.NORMAL_FONT_BOLD)
+        self.main_high_low_label.hide() # only show for daily forecast with high/low data
 
         self.indoor_label_desc = QLabel("Indoors :")
         self.indoor_label_desc.setFont(Constant.LARGE_FONT)
@@ -108,7 +117,6 @@ class WeatherUI(QWidget):
         vbox_top_left = QVBoxLayout()
         vbox_top_right = QVBoxLayout()
 
-
         vbox_top_left.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
         vbox_top_left.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
         vbox_top_right.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
@@ -119,14 +127,20 @@ class WeatherUI(QWidget):
         
         inner_middle_layout = QHBoxLayout()
 
+        inner_current_layout = QVBoxLayout()
+        inner_current_layout.addWidget(self.current_desc, alignment=Qt.AlignCenter)
+        inner_current_layout.addWidget(self.current_temp_label, alignment=Qt.AlignCenter)
+
         inner_main_layout = QVBoxLayout()
         inner_main_layout.addWidget(self.main_period_desc, alignment=Qt.AlignCenter)
         inner_main_layout.addWidget(self.icon_label, alignment=Qt.AlignCenter)
         inner_main_layout.addWidget(self.main_temp_label, alignment=Qt.AlignCenter)
+        inner_main_layout.addWidget(self.main_high_low_label, alignment=Qt.AlignCenter)
 
+        inner_middle_layout.addLayout(inner_current_layout)
         inner_middle_layout.addLayout(inner_main_layout)
              
-        if(Constant.LOCAL_TEMP_ON):
+        if(Constant.LOCAL_SENSOR_ON):
             inner_local_sensor_layout = QVBoxLayout()
             inner_local_sensor_layout.addWidget(self.indoor_label_desc)
             inner_local_sensor_layout.addWidget(self.indoor_temp)
@@ -164,7 +178,7 @@ class WeatherUI(QWidget):
 
     # Currently only a refresh action; multi-location support can be added later.
     def on_btn_location(self, _checked):
-        self.main_period_desc.setText("Current :")
+        self.main_period_desc.setText("Main :")
         self.toggle_location()
 
     def toggle_location(self):
@@ -172,59 +186,101 @@ class WeatherUI(QWidget):
         self.main_period = "1"
         self.refresh()
 
-    def on_btn_time_frame(self, frame):
-        self.toggle_time_frame(frame) 
+    def on_btn_time_frame(self):
+        self.toggle_time_frame()
 
-    def toggle_time_frame(self,frame):
-        if frame:
-            self.main_period = "1"
-            #Button shows to switch to hourly
-            self.btn_time_frame.setText(Constant.DAILY) 
-            #Logic is set to Hourly
-            self.time_frame=Constant.HOURLY
-            self.refresh()
-        else:
+    def toggle_time_frame(self):
+        if self.time_frame == Constant.HOURLY:
             self.main_period = "1"
             self.btn_time_frame.setText(Constant.HOURLY)
-            self.time_frame=Constant.DAILY
-            self.refresh()        
+            self.time_frame = Constant.DAILY
+        elif self.time_frame == Constant.DAILY:
+            self.main_period = "1"
+            self.btn_time_frame.setText(Constant.DAILY)
+            self.time_frame = Constant.HOURLY
+        self.refresh()        
             
     def refresh(self):
         try:
             self.update_current_conditions()
             self.update_forecast_periods()
-            if Constant.LOCAL_TEMP_ON:
+            if Constant.LOCAL_SENSOR_ON:
                 self.update_local_sensor_data()
         except Exception as e:
             print(f"Refresh error: {e}")
             self.main_period_desc.setText("Error fetching data")
             
-
     def update_current_conditions(self):
-        response = requests.get(WEATHER_URL_HOURLY, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
-        if response.status_code != 200:
+        response_hourly = requests.get(WEATHER_URL_HOURLY, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
+        response_daily = requests.get(WEATHER_URL_FORECAST, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
+        if response_hourly.status_code != 200 or response_daily.status_code != 200:
             return
 
-        forecast_json = response.json()
+        forecast_json = response_hourly.json()
+        forecast_daily_json = response_daily.json()
         temp = self.parse_response_single_field(forecast_json)
-        self.main_temp_label.setText(f"{temp} °F")
-        icon = self.parse_response_single_field(forecast_json, item_value="icon")
+        self.current_temp_label.setText(f"{temp} °F")
+        if str(self.main_period) == "1":
+            self.main_forecast_label.setText(self.parse_response_single_field(forecast_daily_json, item_value="detailedForecast"))
+            # TODO: add current current_icon_label
+            icon = self.parse_response_single_field(forecast_json, item_value="icon")
         self.update_icon(icon)
 
     def update_forecast_periods(self):
+        response = self._fetch_forecast()
+        if not response:
+            return
+        
+        forecast_json = response.json()
+        
+        if self.time_frame == Constant.DAILY:
+            self._update_daily_high_low(forecast_json)
+        else:
+            self._update_standard_forecast(forecast_json)
+        
+        self.update_main(self.period_dtos[0])
+    
+    def _fetch_forecast(self):
+        """Fetch forecast data from appropriate URL."""
         forecast_url = WEATHER_URL_FORECAST if self.time_frame == Constant.DAILY else WEATHER_URL_HOURLY
         response = requests.get(forecast_url, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         if response.status_code != 200 or str(self.main_period) != "1":
-            return
+            return None
+        return response
+    
+    def _update_daily_high_low(self, forecast_json):
+        """Update periods with daily high/low from hourly data."""
+        daily_data = self.parse_hourly_for_daily_high_low(forecast_json)
+        sorted_dates = sorted(daily_data.keys())
+        #TODO : last day high low not calculated correctly, need to handle case where last day is current day and only part of the data is available. For now, just show high low for days with full data.
 
-        forecast_json = response.json()
+        for index, period_dto in enumerate(self.period_dtos):
+            if index < len(sorted_dates):
+                date_key = sorted_dates[index]
+                data = daily_data[date_key]
+                day_name = data["name"] if data["name"] else ""
+                period_dto.update(
+                    day=day_name,
+                    temp_high=str(data["high"]),
+                    temp_low=str(data["low"]),
+                    temp=str(data["temp"]),
+                    short=data["shortForecast"],
+                    icon=data["icon"],
+                    start_time=data["startTime"]
+                )
+                if "detailedForecast" in data:
+                    period_dto.long_forecast = data["detailedForecast"]
+                self.period_dtos[index] = period_dto
+                if index > 0:
+                    self.period_widgets[index - 1].update_dataset(period_dto)
+    
+    def _update_standard_forecast(self, forecast_json):
+        """Update periods with standard forecast data."""
         for index, period_dto in enumerate(self.period_dtos, start=1):
             updated_dto = self.update_dto(period_dto, index, forecast_json)
             self.period_dtos[index - 1] = updated_dto
             if index > 1:
                 self.period_widgets[index - 2].update_dataset(updated_dto)
-
-        self.update_main(self.period_dtos[0])
 
     def update_local_sensor_data(self):
         try:
@@ -283,6 +339,61 @@ class WeatherUI(QWidget):
             str(matched_period.get(item_6, "")),
         )
 
+    def parse_hourly_for_daily_high_low(self, response):
+        """Parse hourly forecast to extract daily high/low temperatures."""
+        periods = response.get("properties", {}).get("periods", [])
+        return self._extract_daily_temps(periods)
+    
+    def _extract_daily_temps(self, periods):
+        """Extract daily high/low from hourly periods."""
+        daily_data = {}
+        for period in periods:
+            date_key, temp_val, detail_forecast = self._get_date_and_temp(period)
+            if not date_key or temp_val is None:
+                continue
+            self._update_daily_data(daily_data, date_key, temp_val, period, detail_forecast)
+        return daily_data
+    
+    def _get_date_and_temp(self, period):
+        """Extract date key and temperature value from period."""
+        start_time = period.get("startTime", "")
+        temp = period.get("temperature", "")
+        
+        detail_forecast = period.get("detailedForecast", "")
+        
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(start_time.replace("Z", "+00:00")) 
+            date_key = dt.strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            return None, None, None
+        
+        try:
+            temp_val = int(temp)
+        except (ValueError, TypeError):
+            return None, None, None
+        
+        return date_key, temp_val, detail_forecast
+    
+    def _update_daily_data(self, daily_data, date_key, temp_val, period, detail_forecast):
+        """Update daily data with high/low values."""
+        if date_key not in daily_data:
+            daily_data[date_key] = {
+                "high": temp_val, # same value for high and low
+                "low": temp_val,# same value for high and low
+                "temp": temp_val,
+                "name": period.get("name", ""),
+                "icon": period.get("icon", ""),
+                "shortForecast": period.get("shortForecast", ""),
+                "detailedForecast": detail_forecast,
+                "startTime": period.get("startTime", "")
+            }
+        else:
+            if temp_val > daily_data[date_key]["high"]:
+                daily_data[date_key]["high"] = temp_val
+            if temp_val < daily_data[date_key]["low"]:
+                daily_data[date_key]["low"] = temp_val
+
     def update_icon(self, url):
         try:
             img_data = requests.get(url, timeout=Constant.REQUEST_TIMEOUT_SECONDS).content
@@ -302,13 +413,24 @@ class WeatherUI(QWidget):
         # Main is already set for period 1 for icon and temp, do not overwrite it
         if(dto.period != str("1")): 
             self.main_temp_label.setText(dto.temp)
+            self.main_temp_label.show()
+            self.main_high_low_label.hide()
             self.update_icon(dto.icon)
+        
         if(self.time_frame==Constant.DAILY): 
             self.main_period_desc.setText(dto.full_day+":")
             self.main_forecast_label.setText(dto.long_forecast)
+            if dto.temp_high and dto.temp_low:
+                
+                self.main_temp_label.hide()
+                self.main_high_low_label.setText(f"H: {dto.temp_high}/L: {dto.temp_low}")
+                self.main_high_low_label.show()
         else:
             self.main_period_desc.setText(dto.start_time+":")
             self.main_forecast_label.setText(dto.short_forecast)
+            self.main_temp_label.setText(dto.temp)
+            self.main_temp_label.show()
+            self.main_high_low_label.hide()
         self.set_font_size(self.main_forecast_label,len(str(self.main_forecast_label.text())) )
 
     def set_font_size(self, obj, size):
