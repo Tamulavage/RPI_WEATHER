@@ -2,10 +2,10 @@ import uasyncio as asyncio
 from microdot import Microdot
 from machine import Pin
 import network
-import Secrets
+import Secrets as Secrets
 import Temp
 import Gas
-import Constant
+import rpi.Constant as Constant
 
 LOGGER_ON=True
 
