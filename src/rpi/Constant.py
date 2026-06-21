@@ -16,4 +16,4 @@ LIGHT_BLUE= "color: #00e5ff;"
 VIVID_RED= "color: #ff001a;"
 YELLOW= "color: #FFFF00;"
 
-LOCAL_SENSOR_ON = True
+LOCAL_SENSOR_ON = False
