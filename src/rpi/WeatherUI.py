@@ -1,4 +1,5 @@
 import sys,requests 
+from datetime import datetime
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
@@ -8,11 +9,11 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
-    QWidget,
+    QWidget
 )
 
 import Constant
-import Secrets
+import Secrets as Secrets
 from WeatherDto import WeatherDto
 from WeatherWidget import WeatherWidget
 
@@ -362,7 +363,6 @@ class WeatherUI(QWidget):
         detail_forecast = period.get("detailedForecast", "")
         
         try:
-            from datetime import datetime
             dt = datetime.fromisoformat(start_time.replace("Z", "+00:00")) 
             date_key = dt.strftime("%Y-%m-%d")
         except (ValueError, TypeError):

@@ -23,22 +23,29 @@ Display tested on a 7 inch touchscreen with a Raspberry Pi 3b+
 
 ## Project Structure
 
-```
 weather/
-├── WeatherUI.py          # Main PyQt5 application interface
-├── WeatherWidget.py      # Custom weather forecast widget component
-├── WeatherDto.py         # Weather data transfer object
-├── Constant.py           # UI constants and styling
-├── Secrets.py            # Configuration (API keys, WiFi credentials, locations)
-├── README.md             # This file
-│
-└── PICO_W/              # Raspberry Pi Pico W firmware
-    ├── main.py          # Microdot server and WiFi setup
-    ├── Temp.py          # Temperature/humidity sensor driver
-    ├── Gas.py           # Air quality sensor driver
-    ├── Constant.py      # Pico-specific constants
-    └── Secrets.py       # WiFi SSID and password
-```
+├── README.md
+├── Secrets.py
+├── src/
+│   ├── pico_w/
+│   │   ├── Constant.py
+│   │   ├── Gas.py
+│   │   ├── main.py
+│   │   ├── Secrets.py
+│   │   └── Temp.py
+│   └── rpi/
+│       ├── Constant.py
+│       ├── Secrets.py
+│       ├── WeatherDto.py
+│       ├── WeatherUI.py
+│       └── WeatherWidget.py
+└── test/
+    ├── pico_w/
+    │   └── test_pico_data.py
+    └── rpi/
+        ├── __init__.py
+        ├── test_weatherDTO.py
+        └── test_weatherUI.py
 
 ## Requirements
 
@@ -73,7 +80,7 @@ PICO_IP = "YOUR_PICO_W_IP_ADDRESS"
 
 3. Run the application:
 ```bash
-python WeatherUI.py
+python src/WeatherUI.py
 ```
 
 ### Pico W Setup
