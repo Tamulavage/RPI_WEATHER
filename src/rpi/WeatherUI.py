@@ -1,5 +1,14 @@
-import sys,requests 
+import sys
+import requests
+import warnings
 from datetime import datetime
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"sipPyTypeDict\(\) is deprecated, the extension module should use sipPyTypeDictRef\(\) instead",
+    category=DeprecationWarning,
+)
+
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
