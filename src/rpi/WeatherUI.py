@@ -1,9 +1,19 @@
-import sys,requests 
+import sys
+import requests
+import warnings
 from datetime import datetime
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"sipPyTypeDict\(\) is deprecated, the extension module should use sipPyTypeDictRef\(\) instead",
+    category=DeprecationWarning,
+)
+
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -18,8 +28,12 @@ from WeatherDto import WeatherDto
 from WeatherWidget import WeatherWidget
 
 # Location could be loaded from a config class in the future.
-WEATHER_URL_HOURLY = f"https://api.weather.gov/gridpoints/{Secrets.LOCATION}/forecast/hourly"
-WEATHER_URL_FORECAST = f"https://api.weather.gov/gridpoints/{Secrets.LOCATION}/forecast"
+def get_weather_url_hourly(location_code):
+    return f"https://api.weather.gov/gridpoints/{location_code}/forecast/hourly"
+
+def get_weather_url_forecast(location_code):
+    return f"https://api.weather.gov/gridpoints/{location_code}/forecast"
+
 HEADERS = Secrets.HEADERS
 PICO_URL = f"http://{Secrets.PICO_IP}:80/data"
 
@@ -27,6 +41,7 @@ class WeatherUI(QWidget):
     def __init__(self):
         super().__init__()
         self.main_period = "1"
+        self.location_code = Secrets.LOCATION_WIL
         self.period_dtos = [WeatherDto(str(index)) for index in range(1, 8)]
         self.period_widgets = []
         
@@ -55,12 +70,12 @@ class WeatherUI(QWidget):
         self.btn_toggle_size.setMaximumWidth(80) 
         self.btn_toggle_size.setMaximumHeight(40)
         
-        #TODO Location selection can later be switched to a dropdown.
-        self.btn_location = QPushButton('Wilmington', self)
-        self.btn_location.setCheckable(True)
-        self.btn_location.clicked.connect(self.on_btn_location)
-        self.btn_location.setMaximumHeight(400)
-        self.btn_location.setFont(Constant.NORMAL_FONT)
+        self.location_combo = QComboBox(self)
+        self.location_combo.addItems(["Wilmington DE", "Ocean View DE"])
+        self.location_combo.setCurrentIndex(0)
+        self.location_combo.currentTextChanged.connect(self.on_location_changed)
+        self.location_combo.setMaximumHeight(40)
+        self.location_combo.setFont(Constant.NORMAL_FONT)
 
         self.btn_time_frame = QPushButton(Constant.HOURLY, self)
         self.btn_time_frame.setCheckable(True)
@@ -118,7 +133,7 @@ class WeatherUI(QWidget):
         vbox_top_left = QVBoxLayout()
         vbox_top_right = QVBoxLayout()
 
-        vbox_top_left.addWidget(self.btn_location, alignment=Qt.AlignTop | Qt.AlignLeft)
+        vbox_top_left.addWidget(self.location_combo, alignment=Qt.AlignTop | Qt.AlignLeft)
         vbox_top_left.addWidget(self.btn_time_frame, alignment=Qt.AlignTop | Qt.AlignLeft)
         vbox_top_right.addWidget(quit_button, alignment=Qt.AlignTop | Qt.AlignRight)
         vbox_top_right.addWidget(self.btn_toggle_size, alignment=Qt.AlignTop | Qt.AlignRight)
@@ -177,13 +192,9 @@ class WeatherUI(QWidget):
             self.btn_toggle_size.setText('Min')
         self.refresh()
 
-    # Currently only a refresh action; multi-location support can be added later.
-    def on_btn_location(self, _checked):
+    def on_location_changed(self, selection):
         self.main_period_desc.setText("Main :")
-        self.toggle_location()
-
-    def toggle_location(self):
-        print("switch location - not turned on yet - refresh only now")
+        self.location_code = Secrets.LOCATION_OV if selection == "Ocean View DE" else Secrets.LOCATION_WIL
         self.main_period = "1"
         self.refresh()
 
@@ -212,8 +223,8 @@ class WeatherUI(QWidget):
             self.main_period_desc.setText("Error fetching data")
             
     def update_current_conditions(self):
-        response_hourly = requests.get(WEATHER_URL_HOURLY, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
-        response_daily = requests.get(WEATHER_URL_FORECAST, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
+        response_hourly = requests.get(get_weather_url_hourly(self.location_code), headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
+        response_daily = requests.get(get_weather_url_forecast(self.location_code), headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         if response_hourly.status_code != 200 or response_daily.status_code != 200:
             return
 
@@ -243,7 +254,7 @@ class WeatherUI(QWidget):
     
     def _fetch_forecast(self):
         """Fetch forecast data from appropriate URL."""
-        forecast_url = WEATHER_URL_FORECAST if self.time_frame == Constant.DAILY else WEATHER_URL_HOURLY
+        forecast_url = get_weather_url_forecast(self.location_code) if self.time_frame == Constant.DAILY else get_weather_url_hourly(self.location_code)
         response = requests.get(forecast_url, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         if response.status_code != 200 or str(self.main_period) != "1":
             return None
@@ -253,8 +264,6 @@ class WeatherUI(QWidget):
         """Update periods with daily high/low from hourly data."""
         daily_data = self.parse_hourly_for_daily_high_low(forecast_json)
         sorted_dates = sorted(daily_data.keys())
-        #TODO : last day high low not calculated correctly, need to handle case where last day is current day and only part of the data is available. For now, just show high low for days with full data.
-
         for index, period_dto in enumerate(self.period_dtos):
             if index < len(sorted_dates):
                 date_key = sorted_dates[index]
