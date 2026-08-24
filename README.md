@@ -73,7 +73,8 @@ pip install PyQt5 requests
 
 2. Configure `Secrets.py` with your NOAA location code and API headers:
 ```python
-LOCATION = "YOUR_NOAA_GRID_POINT"  # e.g., "IND/51,49"
+LOCATION_WIL = "YOUR_NOAA_GRID_POINT"  # e.g., "IND/51,49"
+LOCATION_OV =  "YOUR_NOAA_GRID_POINT"  # e.g., "IND/51,49"
 HEADERS = {"User-Agent": "YOUR_APP_NAME"}
 PICO_IP = "YOUR_PICO_W_IP_ADDRESS"
 ```
