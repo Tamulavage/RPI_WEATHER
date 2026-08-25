@@ -17,3 +17,6 @@ VIVID_RED= "color: #ff001a;"
 YELLOW= "color: #FFFF00;"
 
 LOCAL_SENSOR_ON = False
+
+LOG_FILE_PATH = "log.txt"
+LOGGING_ON = True

@@ -1,4 +1,5 @@
 import sys
+import logging
 import requests
 import warnings
 from datetime import datetime
@@ -36,10 +37,28 @@ def get_weather_url_forecast(location_code):
 
 HEADERS = Secrets.HEADERS
 PICO_URL = f"http://{Secrets.PICO_IP}:80/data"
+LOGGER = logging.getLogger(__name__)
+
+
+def configure_logging():
+    LOGGER.setLevel(logging.INFO)
+    LOGGER.propagate = False
+
+    while LOGGER.handlers:
+        handler = LOGGER.handlers[0]
+        LOGGER.removeHandler(handler)
+        handler.close()
+
+    LOGGER.disabled = not Constant.LOGGING_ON
+    if Constant.LOGGING_ON:
+        handler = logging.FileHandler(Constant.LOG_FILE_PATH)
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        LOGGER.addHandler(handler)
 
 class WeatherUI(QWidget):
     def __init__(self):
         super().__init__()
+        configure_logging()
         self.main_period = "1"
         self.location_code = Secrets.LOCATION_WIL
         self.period_dtos = [WeatherDto(str(index)) for index in range(1, 8)]
@@ -84,7 +103,8 @@ class WeatherUI(QWidget):
         self.btn_time_frame.setFont(Constant.NORMAL_FONT)
         self.btn_time_frame.setStyleSheet("text-align: left;") 
 
-        self.current_desc = QLabel("Current :")
+        self.current_desc = QPushButton("Current :", self)
+        self.current_desc.clicked.connect(self.on_current_desc_clicked)
         self.current_desc.setFont(Constant.LARGE_FONT)
         
         self.current_temp_label = QLabel("--°F")
@@ -198,6 +218,9 @@ class WeatherUI(QWidget):
         self.main_period = "1"
         self.refresh()
 
+    def on_current_desc_clicked(self):
+        self.refresh
+
     def on_btn_time_frame(self):
         self.toggle_time_frame()
 
@@ -219,14 +242,27 @@ class WeatherUI(QWidget):
             if Constant.LOCAL_SENSOR_ON:
                 self.update_local_sensor_data()
         except Exception as e:
-            print(f"Refresh error: {e}")
+            if Constant.LOGGING_ON:
+                LOGGER.exception("Refresh error: %s", e)
             self.main_period_desc.setText("Error fetching data")
             
     def update_current_conditions(self):
         response_hourly = requests.get(get_weather_url_hourly(self.location_code), headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         response_daily = requests.get(get_weather_url_forecast(self.location_code), headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         if response_hourly.status_code != 200 or response_daily.status_code != 200:
+            if Constant.LOGGING_ON:
+                LOGGER.error(
+                    "Weather request failed: hourly status=%s, daily status=%s",
+                    response_hourly.status_code,
+                    response_daily.status_code,
+                )
             return
+        if Constant.LOGGING_ON:
+            LOGGER.info(
+                "Weather request success: hourly status=%s, daily status=%s",
+                response_hourly.status_code,
+                response_daily.status_code,
+            )
 
         forecast_json = response_hourly.json()
         forecast_daily_json = response_daily.json()
@@ -236,7 +272,7 @@ class WeatherUI(QWidget):
             self.main_forecast_label.setText(self.parse_response_single_field(forecast_daily_json, item_value="detailedForecast"))
             # TODO: add current current_icon_label
             icon = self.parse_response_single_field(forecast_json, item_value="icon")
-        self.update_icon(icon)
+            self.update_icon(icon)
 
     def update_forecast_periods(self):
         response = self._fetch_forecast()
@@ -256,7 +292,11 @@ class WeatherUI(QWidget):
         """Fetch forecast data from appropriate URL."""
         forecast_url = get_weather_url_forecast(self.location_code) if self.time_frame == Constant.DAILY else get_weather_url_hourly(self.location_code)
         response = requests.get(forecast_url, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
-        if response.status_code != 200 or str(self.main_period) != "1":
+        if response.status_code != 200:
+            if Constant.LOGGING_ON:
+                LOGGER.error("Forecast request failed with status=%s", response.status_code)
+            return None
+        if str(self.main_period) != "1":
             return None
         return response
     
@@ -302,7 +342,8 @@ class WeatherUI(QWidget):
             self.indoor_humidity.setText(f"Humidity: {local_temp_json['Humidity']} %")
             self.determine_air_qty(local_temp_json['co2_ppm'], "CO2", 850, 1800)
         except requests.RequestException as exc:
-            print(f"Local sensor update error: {exc}")
+            if Constant.LOGGING_ON:
+                LOGGER.exception("Local sensor update error: %s", exc)
             self.indoor_label_desc.setText("Error connecting...")
             return
 
@@ -407,7 +448,8 @@ class WeatherUI(QWidget):
         try:
             img_data = requests.get(url, timeout=Constant.REQUEST_TIMEOUT_SECONDS).content
         except requests.RequestException as exc:
-            print(f"Icon update error: {exc}")
+            if Constant.LOGGING_ON:
+                LOGGER.exception("Icon update error: %s", exc)
             return
 
         img = QImage()
