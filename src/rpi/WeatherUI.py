@@ -49,8 +49,8 @@ def configure_logging():
         LOGGER.removeHandler(handler)
         handler.close()
 
-    LOGGER.disabled = not Constant.LOGGING_ON
-    if Constant.LOGGING_ON:
+    LOGGER.disabled = not Constant.FILE_LOGGING_ON
+    if Constant.FILE_LOGGING_ON:
         handler = logging.FileHandler(Constant.LOG_FILE_PATH)
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         LOGGER.addHandler(handler)
@@ -219,7 +219,7 @@ class WeatherUI(QWidget):
         self.refresh()
 
     def on_current_desc_clicked(self):
-        self.refresh
+        self.refresh()
 
     def on_btn_time_frame(self):
         self.toggle_time_frame()
@@ -243,26 +243,35 @@ class WeatherUI(QWidget):
                 self.update_local_sensor_data()
         except Exception as e:
             if Constant.LOGGING_ON:
-                LOGGER.exception("Refresh error: %s", e)
+                if Constant.FILE_LOGGING_ON:
+                    LOGGER.exception("Refresh error: %s", e)
+                else:
+                    print(f"Refresh error: {e}")
             self.main_period_desc.setText("Error fetching data")
             
     def update_current_conditions(self):
         response_hourly = requests.get(get_weather_url_hourly(self.location_code), headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         response_daily = requests.get(get_weather_url_forecast(self.location_code), headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         if response_hourly.status_code != 200 or response_daily.status_code != 200:
-            if Constant.LOGGING_ON:
-                LOGGER.error(
-                    "Weather request failed: hourly status=%s, daily status=%s",
+            if Constant.LOGGING_ON:    
+                if Constant.FILE_LOGGING_ON:
+                    LOGGER.error(
+                        "Weather request failed: hourly status=%s, daily status=%s",
+                        response_hourly.status_code,
+                        response_daily.status_code,
+                    )
+                else:
+                    print(f"Weather request failed: hourly status={response_hourly.status_code}, daily status={response_daily.status_code}")
+            return
+        if Constant.LOGGING_ON:
+            if Constant.FILE_LOGGING_ON:
+                LOGGER.info(
+                    "Weather request success: hourly status=%s, daily status=%s",
                     response_hourly.status_code,
                     response_daily.status_code,
                 )
-            return
-        if Constant.LOGGING_ON:
-            LOGGER.info(
-                "Weather request success: hourly status=%s, daily status=%s",
-                response_hourly.status_code,
-                response_daily.status_code,
-            )
+            else:
+                print(f"Weather request success: hourly status={response_hourly.status_code}, daily status={response_daily.status_code}")
 
         forecast_json = response_hourly.json()
         forecast_daily_json = response_daily.json()
@@ -293,8 +302,11 @@ class WeatherUI(QWidget):
         forecast_url = get_weather_url_forecast(self.location_code) if self.time_frame == Constant.DAILY else get_weather_url_hourly(self.location_code)
         response = requests.get(forecast_url, headers=HEADERS, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
         if response.status_code != 200:
-            if Constant.LOGGING_ON:
-                LOGGER.error("Forecast request failed with status=%s", response.status_code)
+            if Constant.LOGGING_ON:       
+                if Constant.FILE_LOGGING_ON:
+                    LOGGER.error("Forecast request failed with status=%s", response.status_code)
+                else:
+                    print(f"Forecast request failed with status={response.status_code}")
             return None
         if str(self.main_period) != "1":
             return None
@@ -342,8 +354,11 @@ class WeatherUI(QWidget):
             self.indoor_humidity.setText(f"Humidity: {local_temp_json['Humidity']} %")
             self.determine_air_qty(local_temp_json['co2_ppm'], "CO2", 850, 1800)
         except requests.RequestException as exc:
-            if Constant.LOGGING_ON:
-                LOGGER.exception("Local sensor update error: %s", exc)
+            if Constant.LOGGING_ON:             
+                if Constant.FILE_LOGGING_ON:
+                    LOGGER.exception("Local sensor update error: %s", exc)
+                else:
+                    print(f"Local sensor update error: {exc}")
             self.indoor_label_desc.setText("Error connecting...")
             return
 
@@ -448,8 +463,11 @@ class WeatherUI(QWidget):
         try:
             img_data = requests.get(url, timeout=Constant.REQUEST_TIMEOUT_SECONDS).content
         except requests.RequestException as exc:
-            if Constant.LOGGING_ON:
-                LOGGER.exception("Icon update error: %s", exc)
+            if Constant.LOGGING_ON:         
+                if Constant.FILE_LOGGING_ON:
+                    LOGGER.exception("Icon update error: %s", exc)
+                else:
+                    print(f"Icon update error: {exc}")
             return
 
         img = QImage()
