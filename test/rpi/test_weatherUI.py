@@ -1,6 +1,8 @@
 import os
 import sys
 
+import requests
+
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..\\..", "src\\rpi"))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
@@ -20,8 +22,33 @@ class DummyLabel:
         self.style = value
 
 
+class DummyResponse:
+    def __init__(self, payload=None, error=None, status_code=200):
+        self.payload = payload
+        self.error = error
+        self.status_code = status_code
+
+    def raise_for_status(self):
+        if self.error:
+            raise self.error
+
+    def json(self):
+        if self.error:
+            raise self.error
+        return self.payload
+
+
 def make_ui_instance():
     return WeatherUI.__new__(WeatherUI)
+
+
+def make_sensor_ui():
+    ui = make_ui_instance()
+    ui.indoor_label_desc = DummyLabel()
+    ui.indoor_temp = DummyLabel()
+    ui.indoor_humidity = DummyLabel()
+    ui.indoor_air_qlty = DummyLabel()
+    return ui
 
 
 def clear_logger():
@@ -84,6 +111,31 @@ def test_parse_response_single_field_returns_requested_period_value():
     assert ui.parse_response_single_field(response, period=1) == "42"
     assert ui.parse_response_single_field(response, period=2) == "50"
     assert ui.parse_response_single_field(response, period=3) == ""
+
+
+def test_weather_payload_missing_keys_returns_empty_values():
+    ui = make_ui_instance()
+
+    assert ui.parse_response_single_field({}) == ""
+    assert ui.parse_response_multi_field({}) == ("", "", "", "", "", "")
+
+
+def test_weather_http_error_does_not_render_partial_response(monkeypatch):
+    ui = make_ui_instance()
+    ui.location_code = "TEST"
+    ui.main_period = "1"
+    ui.current_temp_label = DummyLabel()
+    ui.current_temp_label.setText("stale temperature")
+    ui.main_forecast_label = DummyLabel()
+    ui.main_forecast_label.setText("stale forecast")
+    responses = iter((DummyResponse(status_code=503), DummyResponse()))
+    monkeypatch.setattr("WeatherUI.requests.get", lambda *args, **kwargs: next(responses))
+    monkeypatch.setattr(Constant, "LOGGING_ON", False)
+
+    ui.update_current_conditions()
+
+    assert ui.current_temp_label.text == "stale temperature"
+    assert ui.main_forecast_label.text == "stale forecast"
 
 
 def test_parse_response_multi_field_returns_expected_values():
@@ -200,3 +252,85 @@ def test_determine_air_qty_sets_expected_label_text_for_levels():
 
     ui.determine_air_qty(800, "CO2", 850, 1800)
     assert ui.indoor_air_qlty.text == "CO2 Normal"
+
+
+def test_local_sensor_uses_defaults_for_missing_and_invalid_fields(monkeypatch):
+    ui = make_sensor_ui()
+    monkeypatch.setattr(
+        "WeatherUI.requests.get",
+        lambda *args, **kwargs: DummyResponse({"Temp": "72", "co2_ppm": float("nan")}),
+    )
+
+    ui.update_local_sensor_data()
+
+    assert ui.indoor_temp.text == "--°F"
+    assert ui.indoor_humidity.text == "Humidity: -- %"
+    assert ui.indoor_air_qlty.text == "CO2 unavailable"
+    assert ui.indoor_label_desc.text == "Indoors :"
+
+
+def test_local_sensor_converts_declared_celsius_before_rendering(monkeypatch):
+    ui = make_sensor_ui()
+    monkeypatch.setattr(
+        "WeatherUI.requests.get",
+        lambda *args, **kwargs: DummyResponse(
+            {"Temp": 20, "TempUnit": "C", "Humidity": 45, "co2_ppm": 700}
+        ),
+    )
+
+    ui.update_local_sensor_data()
+
+    assert ui.indoor_temp.text == "68 °F"
+    assert ui.indoor_humidity.text == "Humidity: 45 %"
+    assert ui.indoor_air_qlty.text == "CO2 Normal"
+
+
+def test_local_sensor_malformed_json_resets_labels_without_raising(monkeypatch):
+    ui = make_sensor_ui()
+    ui.indoor_temp.setText("stale")
+    monkeypatch.setattr(
+        "WeatherUI.requests.get",
+        lambda *args, **kwargs: DummyResponse(error=ValueError("invalid JSON")),
+    )
+    monkeypatch.setattr(Constant, "LOGGING_ON", False)
+
+    ui.update_local_sensor_data()
+
+    assert ui.indoor_label_desc.text == "Sensor unavailable:"
+    assert ui.indoor_temp.text == "--°F"
+    assert ui.indoor_humidity.text == "Humidity: -- %"
+    assert ui.indoor_air_qlty.text == "CO2 unavailable"
+
+
+def test_local_sensor_request_failure_is_recoverable(monkeypatch):
+    ui = make_sensor_ui()
+
+    def fail_request(*args, **kwargs):
+        raise requests.ConnectionError("sensor unavailable")
+
+    monkeypatch.setattr("WeatherUI.requests.get", fail_request)
+    monkeypatch.setattr(Constant, "LOGGING_ON", False)
+
+    ui.update_local_sensor_data()
+
+    assert ui.indoor_label_desc.text == "Sensor unavailable:"
+    assert ui.indoor_temp.text == "--°F"
+    assert ui.indoor_humidity.text == "Humidity: -- %"
+    assert ui.indoor_air_qlty.text == "CO2 unavailable"
+
+
+def test_local_sensor_http_error_resets_readings(monkeypatch):
+    ui = make_sensor_ui()
+    response = DummyResponse(
+        error=requests.HTTPError("503 Service Unavailable"),
+        status_code=503,
+    )
+    monkeypatch.setattr("WeatherUI.requests.get", lambda *args, **kwargs: response)
+    monkeypatch.setattr(Constant, "LOGGING_ON", False)
+
+    ui.update_local_sensor_data()
+
+    assert ui.indoor_label_desc.text == "Sensor unavailable:"
+    assert ui.indoor_temp.text == "--°F"
+    assert ui.indoor_humidity.text == "Humidity: -- %"
+    assert ui.indoor_air_qlty.text == "CO2 unavailable"

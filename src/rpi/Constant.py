@@ -16,8 +16,8 @@ LIGHT_BLUE= "color: #00e5ff;"
 VIVID_RED= "color: #ff001a;"
 YELLOW= "color: #FFFF00;"
 
-LOCAL_SENSOR_ON = False
+LOCAL_SENSOR_ON = True
 
 LOGGING_ON = True
 LOG_FILE_PATH = "log.txt"
-FILE_LOGGING_ON = True
+FILE_LOGGING_ON = False

@@ -5,16 +5,16 @@ import network
 import Secrets as Secrets
 import Temp
 import Gas
+from Wifi import wait_for_connection
 import rpi.Constant as Constant
 
 LOGGER_ON=True
 
-def connect_wifi():
+def connect_wifi(timeout_seconds=30):
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(Secrets.SSID, Secrets.WIFI_PASSWORD)
-    while not wlan.isconnected():
-        pass    
+    wait_for_connection(wlan, timeout_seconds)
     if(LOGGER_ON):
         print("Connected to WiFi: ",  wlan.ifconfig()[0])
     return wlan.ifconfig()[0]
