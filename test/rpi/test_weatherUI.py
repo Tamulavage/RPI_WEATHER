@@ -5,7 +5,8 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..\\..", "sr
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from WeatherUI import WeatherUI
+import Constant
+from WeatherUI import LOGGER, configure_logging, WeatherUI
 
 class DummyLabel:
     def __init__(self):
@@ -21,6 +22,52 @@ class DummyLabel:
 
 def make_ui_instance():
     return WeatherUI.__new__(WeatherUI)
+
+
+def clear_logger():
+    while LOGGER.handlers:
+        handler = LOGGER.handlers[0]
+        LOGGER.removeHandler(handler)
+        handler.close()
+    LOGGER.disabled = False
+
+
+def test_configure_logging_writes_to_configured_file(tmp_path, monkeypatch):
+    log_path = tmp_path / "weather.log"
+    monkeypatch.setattr(Constant, "LOG_FILE_PATH", str(log_path))
+    monkeypatch.setattr(Constant, "LOGGING_ON", True)
+
+    configure_logging()
+    LOGGER.error("test logging message")
+    LOGGER.handlers[0].flush()
+
+    assert "test logging message" in log_path.read_text()
+    clear_logger()
+
+
+def test_configure_logging_disabled_does_not_create_file(tmp_path, monkeypatch):
+    log_path = tmp_path / "weather.log"
+    monkeypatch.setattr(Constant, "LOG_FILE_PATH", str(log_path))
+    monkeypatch.setattr(Constant, "LOGGING_ON", False)
+
+    configure_logging()
+    LOGGER.error("disabled logging message")
+
+    assert not log_path.exists()
+    assert not LOGGER.handlers
+    clear_logger()
+
+
+def test_refresh_does_not_log_when_logging_is_disabled(monkeypatch):
+    ui = make_ui_instance()
+    ui.main_period_desc = DummyLabel()
+    monkeypatch.setattr(Constant, "LOGGING_ON", False)
+    monkeypatch.setattr(LOGGER, "exception", lambda *args: (_ for _ in ()).throw(AssertionError()))
+    ui.update_current_conditions = lambda: (_ for _ in ()).throw(RuntimeError("refresh failure"))
+
+    ui.refresh()
+
+    assert ui.main_period_desc.text == "Error fetching data"
 
 
 def test_parse_response_single_field_returns_requested_period_value():
