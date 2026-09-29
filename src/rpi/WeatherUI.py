@@ -1,5 +1,7 @@
 import sys
 import logging
+import math
+import numbers
 import requests
 import warnings
 from datetime import datetime
@@ -49,8 +51,9 @@ def configure_logging():
         LOGGER.removeHandler(handler)
         handler.close()
 
-    LOGGER.disabled = not Constant.FILE_LOGGING_ON
-    if Constant.FILE_LOGGING_ON:
+    file_logging_enabled = Constant.LOGGING_ON and Constant.FILE_LOGGING_ON
+    LOGGER.disabled = not file_logging_enabled
+    if file_logging_enabled:
         handler = logging.FileHandler(Constant.LOG_FILE_PATH)
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         LOGGER.addHandler(handler)
@@ -349,18 +352,63 @@ class WeatherUI(QWidget):
             local_temp_response = requests.get(PICO_URL, timeout=Constant.REQUEST_TIMEOUT_SECONDS)
             local_temp_response.raise_for_status()
             local_temp_json = local_temp_response.json()
-            self.indoor_label_desc.setText("Indoors :")
-            self.indoor_temp.setText(f"{local_temp_json['Temp']} °F")
-            self.indoor_humidity.setText(f"Humidity: {local_temp_json['Humidity']} %")
-            self.determine_air_qty(local_temp_json['co2_ppm'], "CO2", 850, 1800)
-        except requests.RequestException as exc:
+            temperature, humidity, co2_ppm = self._parse_local_sensor_payload(local_temp_json)
+        except (requests.RequestException, ValueError, TypeError) as exc:
             if Constant.LOGGING_ON:             
                 if Constant.FILE_LOGGING_ON:
                     LOGGER.exception("Local sensor update error: %s", exc)
                 else:
                     print(f"Local sensor update error: {exc}")
-            self.indoor_label_desc.setText("Error connecting...")
+            self.indoor_label_desc.setText("Sensor unavailable:")
+            self.indoor_temp.setText("--°F")
+            self.indoor_humidity.setText("Humidity: -- %")
+            self.indoor_air_qlty.setText("CO2 unavailable")
+            self.indoor_air_qlty.setStyleSheet(Constant.LIGHT_BLUE)
             return
+
+        self.indoor_label_desc.setText("Indoors :")
+        self.indoor_temp.setText(f"{temperature:g} °F" if temperature is not None else "--°F")
+        self.indoor_humidity.setText(
+            f"Humidity: {humidity:g} %" if humidity is not None else "Humidity: -- %"
+        )
+        if co2_ppm is None:
+            self.indoor_air_qlty.setText("CO2 unavailable")
+            self.indoor_air_qlty.setStyleSheet(Constant.LIGHT_BLUE)
+        else:
+            self.determine_air_qty(co2_ppm, "CO2", 850, 1800)
+
+    def _parse_local_sensor_payload(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Local sensor response must be a JSON object")
+
+        temperature = self._sensor_number(payload.get("Temp"))
+        temperature_unit = payload.get("TempUnit", payload.get("temperature_unit", "F"))
+        if not isinstance(temperature_unit, str):
+            temperature = None
+        elif temperature is not None:
+            unit = temperature_unit.strip().upper().replace("°", "")
+            if unit in ("C", "CELSIUS"):
+                temperature = temperature * 9 / 5 + 32
+            elif unit not in ("F", "FAHRENHEIT"):
+                temperature = None
+
+        humidity = self._sensor_number(payload.get("Humidity"))
+        if humidity is not None and not 0 <= humidity <= 100:
+            humidity = None
+        co2_ppm = self._sensor_number(payload.get("co2_ppm"))
+        if co2_ppm is not None and co2_ppm < 0:
+            co2_ppm = None
+        return temperature, humidity, co2_ppm
+
+    @staticmethod
+    def _sensor_number(value):
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            return None
+        try:
+            numeric_value = float(value)
+        except OverflowError:
+            return None
+        return numeric_value if math.isfinite(numeric_value) else None
 
     def determine_air_qty(self, ppm, gas, normal,  high):
         if ppm > high:

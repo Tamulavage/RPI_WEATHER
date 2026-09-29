@@ -92,3 +92,37 @@ def test_get_temp_f_various_values(monkeypatch, celsius, expected_f):
     TempClass, FakeDHT11 = _import_temp_with_fakes(monkeypatch, temp_c=celsius, humidity=0)
     t = TempClass(16)
     assert t.get_temp_f() == pytest.approx(expected_f)
+
+
+def test_wifi_wait_raises_when_connection_times_out(monkeypatch):
+    import pathlib
+    src_path = pathlib.Path(__file__).resolve().parents[2] / "src"
+    monkeypatch.syspath_prepend(str(src_path))
+    wifi_module = importlib.import_module("pico_w.Wifi")
+    elapsed = {"milliseconds": 0}
+
+    class DisconnectedWlan:
+        def isconnected(self):
+            return False
+
+    monkeypatch.setattr(wifi_module.time, "ticks_ms", lambda: elapsed["milliseconds"], raising=False)
+    monkeypatch.setattr(
+        wifi_module.time,
+        "ticks_diff",
+        lambda current, start: current - start,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        wifi_module.time,
+        "sleep_ms",
+        lambda milliseconds: elapsed.__setitem__(
+            "milliseconds", elapsed["milliseconds"] + milliseconds
+        ),
+        raising=False,
+    )
+
+    wlan = DisconnectedWlan()
+    with pytest.raises(TimeoutError, match="Wi-Fi connection timed out"):
+        wifi_module.wait_for_connection(wlan, timeout_seconds=0.25)
+
+    assert elapsed["milliseconds"] == 300
