@@ -1,8 +1,8 @@
 ---
-agent: agent
+name: review-code
 description: Review Python code for clarity, security, and repository fit against the project's guidance and architecture.
+disable-model-invocation: true
 ---
-
 # Review code for clarity, security, and repository fit
 
 Review the selected code or the relevant files in this repository using the project guidance in README.md and agent.md, along with the surrounding files in src/ and test/.
